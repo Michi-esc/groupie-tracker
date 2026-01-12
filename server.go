@@ -11,7 +11,7 @@ func main() {
 	fs := http.FileServer(http.Dir("./web"))
 	http.Handle("/", fs)
 
-	port := ":8080"
+	port := ":3000"
 	fmt.Printf("🚀 Serveur lancé sur http://localhost%s\n", port)
 	fmt.Println("📱 Ouvrez votre navigateur à cette adresse")
 	fmt.Println("⏹️  Appuyez sur Ctrl+C pour arrêter le serveur")
