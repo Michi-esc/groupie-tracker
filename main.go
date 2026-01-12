@@ -16,21 +16,6 @@ func main() {
 	// Créer la fenêtre principale
 	win := ui.NewWindow(myApp)
 
-	// Variable pour stocker l'artiste actuellement affiché
-	var currentArtist *models.Artist
-
-	// Fonction pour revenir à la liste
-	onBack := func() {
-		currentArtist = nil
-		showArtistList(win)
-	}
-
-	// Fonction pour sélectionner un artiste
-	onSelectArtist := func(artist models.Artist) {
-		currentArtist = &artist
-		showArtistDetail(win, artist)
-	}
-
 	// Afficher la liste au démarrage
 	showArtistList(win)
 
