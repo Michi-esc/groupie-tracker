@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groupie Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Loader -->
+    <div id="loader" class="loader">
+        <div class="spinner"></div>
+        <p>Chargement...</p>
+    </div>
+
+    <!-- Page principale : Liste des artistes -->
+    <div id="artist-list-page" class="page hidden">
+        <header>
+            <h1>🎵 Groupie Tracker</h1>
+            <div class="search-bar">
+                <input type="text" id="search-input" placeholder="Rechercher un artiste... (Ctrl+F)" />
+            </div>
+        </header>
+
+        <main>
+            <div id="artist-grid" class="artist-grid">
+                <!-- Les cartes d'artistes seront générées ici -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Page de détail d'un artiste -->
+    <div id="artist-detail-page" class="page hidden">
+        <button id="back-button" class="back-button">← Retour</button>
+        
+        <div id="artist-detail" class="artist-detail">
+            <!-- Le contenu sera généré par JavaScript -->
+        </div>
+    </div>
+
+    <!-- Message d'erreur -->
+    <div id="error-message" class="error-message hidden">
+        <h2>❌ Erreur</h2>
+        <p id="error-text"></p>
+        <button onclick="location.reload()">Réessayer</button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
