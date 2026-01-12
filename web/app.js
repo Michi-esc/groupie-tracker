@@ -1,6 +1,7 @@
 // État de l'application
 let artists = [];
 let currentArtist = null;
+let activeDecade = 'all';
 
 // Éléments du DOM
 const loader = document.getElementById('loader');
@@ -12,6 +13,11 @@ const artistGrid = document.getElementById('artist-grid');
 const artistDetail = document.getElementById('artist-detail');
 const searchInput = document.getElementById('search-input');
 const backButton = document.getElementById('back-button');
+const resultCount = document.getElementById('result-count');
+const statAvgYear = document.getElementById('stat-avg-year');
+const statMembers = document.getElementById('stat-members');
+const statOldest = document.getElementById('stat-oldest');
+const decadeFilters = document.querySelectorAll('[data-decade]');
 
 // Données de test (à remplacer par un appel API)
 const getDummyArtists = () => {
@@ -94,9 +100,36 @@ async function init() {
         artists = getDummyArtists();
         
         showArtistList();
-        renderArtistGrid(artists);
+        applyFilters();
     } catch (error) {
         showError(error.message);
+    }
+}
+
+// Applique recherche + filtre époque
+function applyFilters() {
+    const query = searchInput.value.toLowerCase().trim();
+    const filtered = artists.filter((artist) => {
+        const matchesQuery =
+            artist.name.toLowerCase().includes(query) ||
+            artist.members.some((member) => member.toLowerCase().includes(query));
+        const matchesEra = matchesDecade(artist.creationDate);
+        return matchesQuery && matchesEra;
+    });
+
+    renderArtistGrid(filtered);
+}
+
+function matchesDecade(year) {
+    switch (activeDecade) {
+        case '60s':
+            return year >= 1960 && year < 1980;
+        case '80s':
+            return year >= 1980 && year < 2000;
+        case 'modern':
+            return year >= 2000;
+        default:
+            return true;
     }
 }
 
@@ -140,65 +173,94 @@ function showError(message) {
 function renderArtistGrid(artistList) {
     artistGrid.innerHTML = '';
     
-    artistList.forEach(artist => {
+    if (!artistList.length) {
+        artistGrid.innerHTML = '<div class="empty-state">Aucun artiste ne correspond à votre recherche.</div>';
+        updateStats(artistList);
+        return;
+    }
+
+    artistList.forEach((artist) => {
         const card = document.createElement('div');
         card.className = 'artist-card';
         card.onclick = () => showArtistDetail(artist);
-        
+
         card.innerHTML = `
-            <img src="${artist.image}" alt="${artist.name}" onerror="this.src='https://via.placeholder.com/400x200?text=${artist.name}'">
-            <h3>${artist.name}</h3>
-            <p class="year">Créé en ${artist.creationDate}</p>
+            <div class="artist-media">
+                <img src="${artist.image}" alt="${artist.name}" onerror="this.src='https://via.placeholder.com/400x300?text=${encodeURIComponent(artist.name)}'">
+                <span class="badge">${artist.creationDate}</span>
+            </div>
+            <div class="artist-body">
+                <div class="artist-title-row">
+                    <h3>${artist.name}</h3>
+                    <span class="pill small">${artist.members.length} membres</span>
+                </div>
+                <p class="muted-row">${artist.locations.slice(0, 3).join(' • ') || 'Aucune localisation'}</p>
+                <div class="tag-row">
+                    ${artist.members.slice(0, 3).map((member) => `<span class="chip">${member}</span>`).join('')}
+                </div>
+            </div>
         `;
-        
+
         artistGrid.appendChild(card);
     });
+
+    updateStats(artistList);
 }
 
 // Générer la page de détail
 function renderArtistDetail(artist) {
     artistDetail.innerHTML = `
-        <img src="${artist.image}" alt="${artist.name}" onerror="this.src='https://via.placeholder.com/400x300?text=${artist.name}'">
-        
-        <h2>${artist.name}</h2>
-        
-        <div class="artist-info">
-            <h3>📅 Informations</h3>
-            <p><strong>Créé en :</strong> ${artist.creationDate}</p>
-            <p><strong>Premier album :</strong> ${artist.firstAlbum}</p>
+        <div class="detail-visual">
+            <div class="detail-glow"></div>
+            <img src="${artist.image}" alt="${artist.name}" onerror="this.src='https://via.placeholder.com/600x420?text=${encodeURIComponent(artist.name)}'">
         </div>
         
-        <div class="artist-info">
-            <h3>👥 Membres</h3>
-            <ul>
-                ${artist.members.map(member => `<li>${member}</li>`).join('')}
-            </ul>
-        </div>
-        
-        <div class="artist-info">
-            <h3>📍 Lieux de concert</h3>
-            <div class="locations-list">
-                ${artist.locations.map(loc => `<div class="location-item">${loc}</div>`).join('')}
+        <div class="detail-info">
+            <p class="eyebrow">Profil artiste</p>
+            <h2>${artist.name}</h2>
+            
+            <div class="pill-row">
+                <span class="pill small">Créé en ${artist.creationDate}</span>
+                <span class="pill small">1er album : ${artist.firstAlbum}</span>
+                <span class="pill small">${artist.members.length} membres</span>
             </div>
-        </div>
-        
-        <div class="artist-info">
-            <h3>🎫 Dates de concert</h3>
-            <div class="dates-list">
-                ${artist.concertDates.map(date => `<div class="date-item">${date}</div>`).join('')}
+
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>Membres</h3>
+                    <div class="list-chips">
+                        ${artist.members.map((member) => `<span class="chip">${member}</span>`).join('')}
+                    </div>
+                </div>
+                <div class="info-card">
+                    <h3>Lieux</h3>
+                    <div class="grid-tags">
+                        ${artist.locations.map((loc) => `<div class="tag-card">${loc}</div>`).join('')}
+                    </div>
+                </div>
+                <div class="info-card">
+                    <h3>Dates</h3>
+                    <div class="grid-tags">
+                        ${artist.concertDates.map((date) => `<div class="tag-card">${date}</div>`).join('')}
+                    </div>
+                </div>
             </div>
         </div>
     `;
 }
 
 // Recherche d'artistes
-searchInput.addEventListener('input', (e) => {
-    const query = e.target.value.toLowerCase();
-    const filtered = artists.filter(artist => 
-        artist.name.toLowerCase().includes(query) ||
-        artist.members.some(member => member.toLowerCase().includes(query))
-    );
-    renderArtistGrid(filtered);
+searchInput.addEventListener('input', () => {
+    applyFilters();
+});
+
+decadeFilters.forEach((btn) => {
+    btn.addEventListener('click', () => {
+        activeDecade = btn.dataset.decade;
+        decadeFilters.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        applyFilters();
+    });
 });
 
 // Bouton retour
@@ -227,6 +289,27 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
+// Met à jour les stats dans le header
+function updateStats(list) {
+    if (!list.length) {
+        resultCount.textContent = '0';
+        statAvgYear.textContent = '–';
+        statMembers.textContent = '–';
+        statOldest.textContent = '–';
+        return;
+    }
+
+    const totalMembers = list.reduce((acc, a) => acc + a.members.length, 0);
+    const avgMembers = (totalMembers / list.length).toFixed(1);
+    const avgYear = Math.round(list.reduce((acc, a) => acc + a.creationDate, 0) / list.length);
+    const oldest = Math.min(...list.map((a) => a.creationDate));
+
+    resultCount.textContent = `${list.length}`;
+    statAvgYear.textContent = `~${avgYear}`;
+    statMembers.textContent = `${avgMembers}`;
+    statOldest.textContent = `Depuis ${oldest}`;
+}
 
 // Lancer l'application au chargement
 window.addEventListener('DOMContentLoaded', init);
