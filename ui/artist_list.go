@@ -48,10 +48,9 @@ func NewArtistList(artists []models.Artist, onSelect func(models.Artist)) *fyne.
 		})
 	}
 
-	// Grille d'artistes
-	// Ajuster la hauteur des cellules (moins haut) sans changer l'espacement
-	grid := container.NewGridWrap(
-		fyne.NewSize(280, 380),
+	// Grille d'artistes - 4 par ligne avec alignement correct
+	grid := container.New(
+		layout.NewGridLayout(4), // Force 4 colonnes
 	)
 	list.grid = grid
 
@@ -81,7 +80,7 @@ func (l *ArtistList) rebuildGrid() {
 	l.grid.Objects = []fyne.CanvasObject{}
 	for _, artist := range l.filteredArtists() {
 		card := createArtistCard(artist, l.onSelect)
-		l.grid.Add(container.NewPadded(card))
+		l.grid.Add(card) // Pas de padding supplémentaire pour un alignement correct
 	}
 	l.grid.Refresh()
 }
