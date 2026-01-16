@@ -5,7 +5,6 @@ import (
 	"groupie-tracker/ui"
 	"log"
 
-	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/dialog"
 )
@@ -45,12 +44,9 @@ func showArtistList(win *ui.Window) {
 			return
 		}
 
-		// Créer et afficher la liste depuis le thread Fyne
-		fyne.CurrentApp().Driver().CanvasForObject(win.Content)
+		// Créer et afficher la liste
 		list := ui.NewArtistList(artists, func(artist models.Artist) {
 			showArtistDetail(win, artist)
-		}, func() {
-			showMap(win, artists)
 		})
 
 		win.SetContent(list)
@@ -65,15 +61,4 @@ func showArtistDetail(win *ui.Window, artist models.Artist) {
 	})
 
 	win.SetContent(detailPage)
-}
-
-func showMap(win *ui.Window, artists []models.Artist) {
-	// Afficher le chargement
-	win.ShowLoading("Chargement de la carte des concerts...")
-
-	// Créer et afficher la page de carte en passant la window
-	ui.NewMapPageWithWindow(win, artists, func() {
-		// Retourner à la liste
-		showArtistList(win)
-	})
 }

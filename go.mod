@@ -5,9 +5,7 @@ go 1.25.0
 require fyne.io/fyne/v2 v2.7.2
 
 require (
-	fyne.io/fyne v1.4.3 // indirect
 	fyne.io/systray v1.12.0 // indirect
-	fyne.io/x/fyne v0.0.0-20251214153509-fa68a7d234d5 // indirect
 	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fredbi/uri v1.1.1 // indirect
@@ -33,7 +31,6 @@ require (
 	github.com/srwiley/oksvg v0.0.0-20221011165216-be6e8873101c // indirect
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
-	github.com/webview/webview_go v0.0.0-20240831120633-6173450d4dd6 // indirect
 	github.com/yuin/goldmark v1.7.8 // indirect
 	golang.org/x/image v0.24.0 // indirect
 	golang.org/x/net v0.35.0 // indirect

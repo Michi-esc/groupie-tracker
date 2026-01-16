@@ -63,12 +63,6 @@ func handleGetArtists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	locations, err := models.FetchLocations()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	// Construire les détails complets
 	artistsWithDetails := make([]ArtistWithDetails, 0, len(artists))
 
@@ -89,14 +83,10 @@ func handleGetArtists(w http.ResponseWriter, r *http.Request) {
 		for _, rel := range relations.Index {
 			if rel.ID == artist.ID {
 				details.DatesLocations = rel.DatesLocations
-				break
-			}
-		}
-
-		// Trouver les locations pour cet artiste
-		for _, loc := range locations.Index {
-			if loc.ID == artist.ID {
-				details.Locations = loc.Locations
+				// Extraire les lieux depuis DatesLocations
+				for loc := range rel.DatesLocations {
+					details.Locations = append(details.Locations, loc)
+				}
 				break
 			}
 		}

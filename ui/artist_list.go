@@ -3,13 +3,8 @@ package ui
 import (
 	"fmt"
 	"groupie-tracker/models"
-<<<<<<< HEAD
 	"image/color"
-	"io"
-	"net/http"
 	"strconv"
-=======
->>>>>>> daba17f1232b7d87c4e05e37aeb4df8d950f091a
 	"strings"
 	"time"
 
@@ -27,7 +22,6 @@ type ArtistList struct {
 	artists        []models.Artist
 	allLocations   []string
 	onSelect       func(models.Artist)
-	onShowMap      func()
 	searchText     string
 	grid           *fyne.Container
 	searchDebounce *time.Timer
@@ -37,14 +31,13 @@ type ArtistList struct {
 	creationMax  int
 	albumMin     int
 	albumMax     int
-	memberCounts map[int]bool // Pour stocker quels nombres de membres sont sélectionnés
+	memberCounts map[int]bool
 	selectedLocs map[string]bool
 }
 
 // NewArtistList crée une nouvelle liste d'artistes
-func NewArtistList(artists []models.Artist, onSelect func(models.Artist), onShowMap func()) *fyne.Container {
+func NewArtistList(artists []models.Artist, onSelect func(models.Artist)) *fyne.Container {
 	list := &ArtistList{
-<<<<<<< HEAD
 		artists:      artists,
 		onSelect:     onSelect,
 		memberCounts: make(map[int]bool),
@@ -66,18 +59,25 @@ func NewArtistList(artists []models.Artist, onSelect func(models.Artist), onShow
 		list.selectedLocs[loc] = true
 	}
 
-	// Variables pour stocker les widgets de filtres à mettre à jour
+	// Variables pour stocker les callbacks de mise à jour
 	var updateLocationChecks func(string)
 
 	// Charger les locations de manière asynchrone
 	go func() {
-		locations, err := models.FetchLocations()
-		if err == nil && locations != nil {
+		relations, err := models.FetchRelations()
+		if err == nil && relations != nil {
 			// Enrichir les artistes avec leurs locations
 			for i := range list.artists {
-				for _, loc := range locations.Index {
-					if loc.ID == list.artists[i].ID {
-						list.artists[i].LocationsList = loc.Locations
+				for _, rel := range relations.Index {
+					if rel.ID == list.artists[i].ID {
+						// Extraire les locations uniques depuis DatesLocations
+						locSet := make(map[string]bool)
+						for loc := range rel.DatesLocations {
+							locSet[loc] = true
+						}
+						for loc := range locSet {
+							list.artists[i].LocationsList = append(list.artists[i].LocationsList, loc)
+						}
 						break
 					}
 				}
@@ -104,42 +104,6 @@ func NewArtistList(artists []models.Artist, onSelect func(models.Artist), onShow
 	// Barre de recherche
 	searchEntry := widget.NewEntry()
 	searchEntry.SetPlaceHolder("🔍 Rechercher un artiste ou membre...")
-=======
-		artists:   artists,
-		onSelect:  onSelect,
-		onShowMap: onShowMap,
-	}
-
-	// === HEADER ===
-	titleText := canvas.NewText("🎵 Groupie Tracker", TextWhite)
-	titleText.TextStyle = fyne.TextStyle{Bold: true}
-	titleText.TextSize = 36
-	titleText.Alignment = fyne.TextAlignCenter
-
-	subtitleText := canvas.NewText("Découvrez vos artistes musicaux préférés", TextLight)
-	subtitleText.TextSize = 14
-	subtitleText.Alignment = fyne.TextAlignCenter
-
-	// Bouton pour voir la carte
-	mapButton := widget.NewButton("🗺️ Voir la carte des concerts", list.onShowMap)
-	mapButton.Importance = widget.HighImportance
-
-	headerBg := canvas.NewRectangle(BgDarker)
-	header := container.NewMax(
-		headerBg,
-		container.NewVBox(
-			widget.NewLabel(""), // Spacer
-			container.NewCenter(titleText),
-			container.NewCenter(subtitleText),
-			container.NewCenter(mapButton),
-			widget.NewLabel(""), // Spacer
-		),
-	)
-
-	// === BARRE DE RECHERCHE ===
-	searchEntry := widget.NewEntry()
-	searchEntry.SetPlaceHolder("🔍 Rechercher un artiste ou un membre...")
->>>>>>> daba17f1232b7d87c4e05e37aeb4df8d950f091a
 	searchEntry.OnChanged = func(text string) {
 		list.searchText = strings.ToLower(text)
 		if list.searchDebounce != nil {
@@ -150,46 +114,29 @@ func NewArtistList(artists []models.Artist, onSelect func(models.Artist), onShow
 		})
 	}
 
-<<<<<<< HEAD
 	// Panneau de filtres
 	filterPanel, _, updateLocationChecksFunc := list.createFilterPanel()
 	updateLocationChecks = updateLocationChecksFunc
 
-	// Grille d'artistes - 4 par ligne
-	grid := container.New(layout.NewGridLayout(4))
-=======
 	// Grille d'artistes - 4 colonnes
-	grid := container.New(
-		layout.NewGridLayout(4),
-	)
->>>>>>> daba17f1232b7d87c4e05e37aeb4df8d950f091a
+	grid := container.New(layout.NewGridLayout(4))
 	list.grid = grid
 	list.rebuildGrid()
 
 	// Conteneur avec scroll
 	scroll := container.NewScroll(grid)
 
-<<<<<<< HEAD
 	return container.NewBorder(
 		container.NewVBox(
 			widget.NewLabelWithStyle("🎵 Groupie Tracker", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 			searchEntry,
 			filterPanel,
 			widget.NewSeparator(),
-=======
-	// Créer un container pour la recherche avec fond
-	searchContainer := container.NewVBox(searchEntry)
-
-	// Layout avec BorderLayout - header en haut, search juste après, scroll au centre
-	return container.New(
-		layout.NewBorderLayout(header, nil, nil, nil),
-		header,
-		container.New(
-			layout.NewBorderLayout(searchContainer, nil, nil, nil),
-			searchContainer,
-			scroll,
->>>>>>> daba17f1232b7d87c4e05e37aeb4df8d950f091a
 		),
+		nil,
+		nil,
+		nil,
+		scroll,
 	)
 }
 
@@ -377,10 +324,9 @@ func (l *ArtistList) rebuildGrid() {
 
 	if len(filteredList) == 0 {
 		// Message "aucun résultat"
-		msgText := canvas.NewText("Aucun résultat trouvé", TextLight)
-		msgText.TextSize = 16
+		msgText := widget.NewLabel("Aucun résultat trouvé")
 		msgText.Alignment = fyne.TextAlignCenter
-		l.grid.Add(container.NewCenter(msgText))
+		l.grid.Add(msgText)
 	} else {
 		for _, artist := range filteredList {
 			card := createArtistCard(artist, l.onSelect)
@@ -531,54 +477,52 @@ func normalizeLocation(loc string) string {
 }
 
 func createArtistCard(artist models.Artist, onSelect func(models.Artist)) *fyne.Container {
-	// Image de l'artiste (chargement simple)
+	// Image de l'artiste
 	uri, _ := storage.ParseURI(artist.Image)
 	img := canvas.NewImageFromURI(uri)
 	img.FillMode = canvas.ImageFillContain
-	img.SetMinSize(fyne.NewSize(220, 200))
+	img.SetMinSize(fyne.NewSize(200, 200))
 
-	// Nom de l'artiste
-	nameText := canvas.NewText(artist.Name, TextWhite)
+	// Nom de l'artiste en noir et centré sous l'image
+	nameText := canvas.NewText(artist.Name, color.Black)
 	nameText.TextStyle = fyne.TextStyle{Bold: true}
-	nameText.TextSize = 16
 	nameText.Alignment = fyne.TextAlignCenter
 
+	// Afficher le nom juste sous l'image avec un fond discret
+	captionBg := canvas.NewRectangle(color.RGBA{R: 235, G: 235, B: 235, A: 255})
+	caption := container.NewMax(
+		captionBg,
+		container.NewPadded(container.NewCenter(nameText)),
+	)
+
 	// Informations
-	infoMembers := canvas.NewText(fmt.Sprintf("👥 %d membres", len(artist.Members)), TextLight)
-	infoMembers.TextSize = 12
-	infoMembers.Alignment = fyne.TextAlignCenter
+	members := widget.NewLabel(fmt.Sprintf("%d membres", len(artist.Members)))
+	members.Alignment = fyne.TextAlignCenter
 
-	infoCreated := canvas.NewText(fmt.Sprintf("🎸 Créé en %d", artist.CreationDate), TextLight)
-	infoCreated.TextSize = 12
-	infoCreated.Alignment = fyne.TextAlignCenter
+	created := widget.NewLabel(fmt.Sprintf("Créé en %d", artist.CreationDate))
+	created.Alignment = fyne.TextAlignCenter
 
-	// Bouton "Voir les détails"
-	btn := widget.NewButton("→ Voir les détails", func() {
+	// Bouton pour voir les détails
+	btn := widget.NewButton("Voir les détails", func() {
 		onSelect(artist)
 	})
 	btn.Importance = widget.HighImportance
 
-	// Layout de la carte
-	cardContent := container.NewVBox(
+	// Card container
+	card := container.NewVBox(
 		img,
-		widget.NewLabel(""), // Spacer
-		container.NewCenter(nameText),
-		container.NewCenter(infoMembers),
-		container.NewCenter(infoCreated),
-		widget.NewLabel(""), // Spacer
-		btn,
+		caption,
+		members,
+		created,
+		container.NewCenter(btn),
 	)
 
-	// Fond de la carte avec bordure
-	cardBg := canvas.NewRectangle(CardBg)
-	cardBgBorder := canvas.NewRectangle(AccentCyan)
-	cardBgBorder.StrokeWidth = 2
+	// Fond avec bordure
+	bg := canvas.NewRectangle(color.RGBA{R: 240, G: 240, B: 240, A: 255})
 
-	// Card container avec padding
 	return container.New(
 		layout.NewMaxLayout(),
-		cardBgBorder,
-		cardBg,
-		container.NewPadded(cardContent),
+		bg,
+		container.NewPadded(card),
 	)
 }
