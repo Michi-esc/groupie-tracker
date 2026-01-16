@@ -18,6 +18,10 @@ type Artist struct {
 	Locations    string   `json:"locations"`
 	ConcertDates string   `json:"concertDates"`
 	Relations    string   `json:"relations"`
+
+	// Champs enrichis (remplis après le fetch)
+	LocationsList []string `json:"-"` // Liste des lieux de concert
+	DatesList     []string `json:"-"` // Liste des dates de concert
 }
 
 // LocationData contient les lieux de concerts

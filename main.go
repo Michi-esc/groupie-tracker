@@ -10,14 +10,19 @@ import (
 )
 
 func main() {
-	// Créer l'application
+	log.Println("🚀 Démarrage de l'application Groupie Tracker...")
+
+	// Créer l'application Fyne
 	myApp := app.New()
+	log.Println("✓ Application Fyne créée")
 
 	// Créer la fenêtre principale
 	win := ui.NewWindow(myApp)
+	log.Println("✓ Fenêtre créée")
 
 	// Afficher la liste au démarrage
 	showArtistList(win)
+	log.Println("✓ Liste d'artistes en cours de chargement...")
 
 	// Afficher la fenêtre et lancer l'application
 	win.Window.ShowAndRun()

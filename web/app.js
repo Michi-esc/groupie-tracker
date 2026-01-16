@@ -1,7 +1,16 @@
 // État de l'application
 let artists = [];
+let allLocations = [];
 let currentArtist = null;
-let activeDecade = 'all';
+let filters = {
+    search: '',
+    creationDateMin: 1950,
+    creationDateMax: 2024,
+    firstAlbumMin: 1950,
+    firstAlbumMax: 2024,
+    members: [1, 2, 3, 4, 5, '6+'],
+    locations: []
+};
 
 // Éléments du DOM
 const loader = document.getElementById('loader');
@@ -17,120 +26,199 @@ const resultCount = document.getElementById('result-count');
 const statAvgYear = document.getElementById('stat-avg-year');
 const statMembers = document.getElementById('stat-members');
 const statOldest = document.getElementById('stat-oldest');
-const decadeFilters = document.querySelectorAll('[data-decade]');
 
-// Données de test (à remplacer par un appel API)
-const getDummyArtists = () => {
-    return [
-        {
-            id: 1,
-            name: "Queen",
-            members: ["Freddie Mercury", "Brian May", "Roger Taylor", "John Deacon"],
-            creationDate: 1970,
-            firstAlbum: "14-12-1973",
-            image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400",
-            locations: ["London", "Paris", "New York", "Tokyo", "Sydney"],
-            concertDates: ["01-01-2024", "15-02-2024", "30-03-2024", "10-05-2024"]
-        },
-        {
-            id: 2,
-            name: "The Beatles",
-            members: ["John Lennon", "Paul McCartney", "George Harrison", "Ringo Starr"],
-            creationDate: 1960,
-            firstAlbum: "22-03-1963",
-            image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400",
-            locations: ["Liverpool", "Hamburg", "New York", "Los Angeles"],
-            concertDates: ["10-05-2024", "20-06-2024", "15-08-2024"]
-        },
-        {
-            id: 3,
-            name: "Pink Floyd",
-            members: ["Roger Waters", "David Gilmour", "Nick Mason", "Richard Wright"],
-            creationDate: 1965,
-            firstAlbum: "05-08-1967",
-            image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400",
-            locations: ["London", "Los Angeles", "Berlin", "Amsterdam"],
-            concertDates: ["01-07-2024", "20-07-2024"]
-        },
-        {
-            id: 4,
-            name: "Led Zeppelin",
-            members: ["Robert Plant", "Jimmy Page", "John Paul Jones", "John Bonham"],
-            creationDate: 1968,
-            firstAlbum: "12-01-1969",
-            image: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=400",
-            locations: ["London", "New York", "Chicago", "San Francisco"],
-            concertDates: ["05-09-2024", "25-09-2024", "10-10-2024"]
-        },
-        {
-            id: 5,
-            name: "The Rolling Stones",
-            members: ["Mick Jagger", "Keith Richards", "Charlie Watts", "Ronnie Wood"],
-            creationDate: 1962,
-            firstAlbum: "16-04-1964",
-            image: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400",
-            locations: ["London", "Paris", "Madrid", "Rome", "Berlin"],
-            concertDates: ["01-11-2024", "15-11-2024", "30-11-2024"]
-        },
-        {
-            id: 6,
-            name: "Nirvana",
-            members: ["Kurt Cobain", "Krist Novoselic", "Dave Grohl"],
-            creationDate: 1987,
-            firstAlbum: "15-06-1989",
-            image: "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=400",
-            locations: ["Seattle", "Portland", "Los Angeles", "New York"],
-            concertDates: ["12-12-2024", "20-12-2024"]
-        }
-    ];
-};
+// Éléments des filtres
+const filterToggle = document.getElementById('filter-toggle');
+const filterPanel = document.getElementById('filter-panel');
+const creationMinInput = document.getElementById('creation-min');
+const creationMaxInput = document.getElementById('creation-max');
+const creationSliderMin = document.getElementById('creation-slider-min');
+const creationSliderMax = document.getElementById('creation-slider-max');
+const albumMinInput = document.getElementById('album-min');
+const albumMaxInput = document.getElementById('album-max');
+const albumSliderMin = document.getElementById('album-slider-min');
+const albumSliderMax = document.getElementById('album-slider-max');
+const memberFilters = document.querySelectorAll('.member-filter');
+const locationSearch = document.getElementById('location-search');
+const locationCheckboxes = document.getElementById('location-checkboxes');
+const resetFiltersBtn = document.getElementById('reset-filters');
+const applyFiltersBtn = document.getElementById('apply-filters');
 
 // Initialisation de l'application
 async function init() {
     showLoader();
     
     try {
-        // Simuler un chargement API
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Appel API réel
+        const response = await fetch('/api/artists');
+        if (!response.ok) {
+            throw new Error('Erreur lors du chargement des artistes');
+        }
         
-        // TODO: Remplacer par un vrai appel API
-        // const response = await fetch('/api/artists');
-        // artists = await response.json();
+        artists = await response.json();
         
-        artists = getDummyArtists();
+        // Extraire tous les lieux uniques et normaliser
+        extractAllLocations();
+        
+        // Initialiser l'UI des filtres
+        initializeFilters();
         
         showArtistList();
         applyFilters();
     } catch (error) {
+        console.error('Erreur:', error);
         showError(error.message);
     }
 }
 
-// Applique recherche + filtre époque
-function applyFilters() {
-    const query = searchInput.value.toLowerCase().trim();
-    const filtered = artists.filter((artist) => {
-        const matchesQuery =
-            artist.name.toLowerCase().includes(query) ||
-            artist.members.some((member) => member.toLowerCase().includes(query));
-        const matchesEra = matchesDecade(artist.creationDate);
-        return matchesQuery && matchesEra;
+// Extraire tous les lieux uniques de tous les artistes
+function extractAllLocations() {
+    const locationSet = new Set();
+    
+    artists.forEach(artist => {
+        if (artist.locations && Array.isArray(artist.locations)) {
+            artist.locations.forEach(loc => {
+                // Normaliser le lieu (gérer les formats "ville-pays")
+                const normalized = normalizeLocation(loc);
+                locationSet.add(normalized);
+            });
+        }
     });
-
-    renderArtistGrid(filtered);
+    
+    allLocations = Array.from(locationSet).sort();
+    filters.locations = [...allLocations]; // Par défaut, tous sélectionnés
 }
 
-function matchesDecade(year) {
-    switch (activeDecade) {
-        case '60s':
-            return year >= 1960 && year < 1980;
-        case '80s':
-            return year >= 1980 && year < 2000;
-        case 'modern':
-            return year >= 2000;
-        default:
-            return true;
-    }
+// Normaliser un lieu (exemple: "seattle-washington-usa" -> "Seattle, Washington, USA")
+function normalizeLocation(loc) {
+    return loc.split('-')
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(', ');
+}
+
+// Initialiser les éléments UI des filtres
+function initializeFilters() {
+    // Trouver les années min/max réelles
+    const creationYears = artists.map(a => a.creationDate);
+    const albumYears = artists.map(a => a.firstAlbumYear).filter(y => y > 0);
+    
+    const minCreation = Math.min(...creationYears);
+    const maxCreation = Math.max(...creationYears);
+    const minAlbum = Math.min(...albumYears);
+    const maxAlbum = Math.max(...albumYears);
+    
+    // Mettre à jour les limites des sliders
+    [creationMinInput, creationSliderMin].forEach(el => {
+        el.min = minCreation;
+        el.max = maxCreation;
+        el.value = minCreation;
+    });
+    
+    [creationMaxInput, creationSliderMax].forEach(el => {
+        el.min = minCreation;
+        el.max = maxCreation;
+        el.value = maxCreation;
+    });
+    
+    [albumMinInput, albumSliderMin].forEach(el => {
+        el.min = minAlbum;
+        el.max = maxAlbum;
+        el.value = minAlbum;
+    });
+    
+    [albumMaxInput, albumSliderMax].forEach(el => {
+        el.min = minAlbum;
+        el.max = maxAlbum;
+        el.value = maxAlbum;
+    });
+    
+    filters.creationDateMin = minCreation;
+    filters.creationDateMax = maxCreation;
+    filters.firstAlbumMin = minAlbum;
+    filters.firstAlbumMax = maxAlbum;
+    
+    // Générer les checkboxes pour les lieux
+    renderLocationCheckboxes(allLocations);
+}
+
+// Générer les checkboxes pour les lieux
+function renderLocationCheckboxes(locations) {
+    locationCheckboxes.innerHTML = '';
+    
+    locations.forEach(loc => {
+        const label = document.createElement('label');
+        label.className = 'checkbox-label';
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = loc;
+        checkbox.checked = filters.locations.includes(loc);
+        checkbox.className = 'location-filter';
+        
+        const span = document.createElement('span');
+        span.textContent = loc;
+        
+        label.appendChild(checkbox);
+        label.appendChild(span);
+        locationCheckboxes.appendChild(label);
+    });
+}
+
+// Applique tous les filtres actifs
+function applyFilters() {
+    const query = filters.search.toLowerCase().trim();
+    
+    console.log('Début du filtrage avec:', filters);
+    
+    const filtered = artists.filter((artist) => {
+        // Filtre de recherche textuelle
+        const matchesSearch = !query || 
+            artist.name.toLowerCase().includes(query) ||
+            artist.members.some((member) => member.toLowerCase().includes(query));
+        
+        // Filtre par date de création
+        const matchesCreationDate = artist.creationDate >= filters.creationDateMin && 
+                                   artist.creationDate <= filters.creationDateMax;
+        
+        // Filtre par année du premier album
+        const matchesFirstAlbum = artist.firstAlbumYear >= filters.firstAlbumMin && 
+                                 artist.firstAlbumYear <= filters.firstAlbumMax;
+        
+        // Filtre par nombre de membres
+        const memberCount = artist.members.length;
+        const matchesMembers = filters.members.includes(memberCount) || 
+                              (memberCount >= 6 && filters.members.includes('6+'));
+        
+        // Filtre par lieu de concert
+        // Un artiste correspond si AU MOINS UN de ses lieux est dans la liste des lieux sélectionnés
+        const matchesLocation = !artist.locations || 
+                               artist.locations.length === 0 ||
+                               artist.locations.some(loc => {
+                                   const normalized = normalizeLocation(loc);
+                                   return filters.locations.includes(normalized);
+                               });
+        
+        const matches = matchesSearch && matchesCreationDate && matchesFirstAlbum && 
+               matchesMembers && matchesLocation;
+        
+        if (!matches && artist.name.toLowerCase().includes('queen')) {
+            console.log('Queen filtré:', {
+                matchesSearch,
+                matchesCreationDate,
+                matchesFirstAlbum,
+                matchesMembers,
+                matchesLocation,
+                locations: artist.locations,
+                filterLocations: filters.locations
+            });
+        }
+        
+        return matches;
+    });
+    
+    console.log(`${filtered.length} artistes après filtrage`);
+
+    renderArtistGrid(filtered);
 }
 
 // Afficher le loader
@@ -184,6 +272,12 @@ function renderArtistGrid(artistList) {
         card.className = 'artist-card';
         card.onclick = () => showArtistDetail(artist);
 
+        // Préparer les lieux normalisés
+        let displayLocations = [];
+        if (artist.locations && artist.locations.length > 0) {
+            displayLocations = artist.locations.slice(0, 3).map(loc => normalizeLocation(loc));
+        }
+
         card.innerHTML = `
             <div class="artist-media">
                 <img src="${artist.image}" alt="${artist.name}" onerror="this.src='https://via.placeholder.com/400x300?text=${encodeURIComponent(artist.name)}'">
@@ -192,11 +286,12 @@ function renderArtistGrid(artistList) {
             <div class="artist-body">
                 <div class="artist-title-row">
                     <h3>${artist.name}</h3>
-                    <span class="pill small">${artist.members.length} membres</span>
+                    <span class="pill small">${artist.members.length} ${artist.members.length > 1 ? 'membres' : 'membre'}</span>
                 </div>
-                <p class="muted-row">${artist.locations.slice(0, 3).join(' • ') || 'Aucune localisation'}</p>
+                <p class="muted-row">${displayLocations.length > 0 ? displayLocations.join(' • ') : 'Aucune localisation'}</p>
                 <div class="tag-row">
                     ${artist.members.slice(0, 3).map((member) => `<span class="chip">${member}</span>`).join('')}
+                    ${artist.members.length > 3 ? `<span class="chip">+${artist.members.length - 3}</span>` : ''}
                 </div>
             </div>
         `;
@@ -209,6 +304,29 @@ function renderArtistGrid(artistList) {
 
 // Générer la page de détail
 function renderArtistDetail(artist) {
+    // Préparer les dates et lieux depuis datesLocations
+    let locationsHTML = '';
+    let datesHTML = '';
+    
+    if (artist.datesLocations && Object.keys(artist.datesLocations).length > 0) {
+        const locations = Object.keys(artist.datesLocations);
+        locationsHTML = locations.map(loc => 
+            `<div class="tag-card">${normalizeLocation(loc)}</div>`
+        ).join('');
+        
+        const allDates = [];
+        Object.values(artist.datesLocations).forEach(dates => {
+            allDates.push(...dates);
+        });
+        datesHTML = allDates.slice(0, 10).map(date => 
+            `<div class="tag-card">${date}</div>`
+        ).join('');
+    } else if (artist.locations && artist.locations.length > 0) {
+        locationsHTML = artist.locations.map(loc => 
+            `<div class="tag-card">${loc}</div>`
+        ).join('');
+    }
+    
     artistDetail.innerHTML = `
         <div class="detail-visual">
             <div class="detail-glow"></div>
@@ -232,18 +350,20 @@ function renderArtistDetail(artist) {
                         ${artist.members.map((member) => `<span class="chip">${member}</span>`).join('')}
                     </div>
                 </div>
+                ${locationsHTML ? `
                 <div class="info-card">
-                    <h3>Lieux</h3>
+                    <h3>Lieux de concerts</h3>
                     <div class="grid-tags">
-                        ${artist.locations.map((loc) => `<div class="tag-card">${loc}</div>`).join('')}
+                        ${locationsHTML}
                     </div>
-                </div>
+                </div>` : ''}
+                ${datesHTML ? `
                 <div class="info-card">
-                    <h3>Dates</h3>
+                    <h3>Dates de concerts</h3>
                     <div class="grid-tags">
-                        ${artist.concertDates.map((date) => `<div class="tag-card">${date}</div>`).join('')}
+                        ${datesHTML}
                     </div>
-                </div>
+                </div>` : ''}
             </div>
         </div>
     `;
@@ -251,16 +371,193 @@ function renderArtistDetail(artist) {
 
 // Recherche d'artistes
 searchInput.addEventListener('input', () => {
+    filters.search = searchInput.value;
     applyFilters();
 });
 
-decadeFilters.forEach((btn) => {
-    btn.addEventListener('click', () => {
-        activeDecade = btn.dataset.decade;
-        decadeFilters.forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-        applyFilters();
+// Toggle du panneau de filtres
+filterToggle.addEventListener('click', () => {
+    filterPanel.classList.toggle('hidden');
+    filterToggle.classList.toggle('active');
+});
+
+// Synchroniser les sliders et inputs pour la date de création
+creationSliderMin.addEventListener('input', (e) => {
+    const val = parseInt(e.target.value);
+    if (val > parseInt(creationSliderMax.value)) {
+        creationSliderMax.value = val;
+        creationMaxInput.value = val;
+    }
+    creationMinInput.value = val;
+});
+
+creationSliderMax.addEventListener('input', (e) => {
+    const val = parseInt(e.target.value);
+    if (val < parseInt(creationSliderMin.value)) {
+        creationSliderMin.value = val;
+        creationMinInput.value = val;
+    }
+    creationMaxInput.value = val;
+});
+
+creationMinInput.addEventListener('input', (e) => {
+    const val = parseInt(e.target.value);
+    if (val > parseInt(creationMaxInput.value)) {
+        creationMaxInput.value = val;
+        creationSliderMax.value = val;
+    }
+    creationSliderMin.value = val;
+});
+
+creationMaxInput.addEventListener('input', (e) => {
+    const val = parseInt(e.target.value);
+    if (val < parseInt(creationMinInput.value)) {
+        creationMinInput.value = val;
+        creationSliderMin.value = val;
+    }
+    creationSliderMax.value = val;
+});
+
+// Synchroniser les sliders et inputs pour l'année du premier album
+albumSliderMin.addEventListener('input', (e) => {
+    const val = parseInt(e.target.value);
+    if (val > parseInt(albumSliderMax.value)) {
+        albumSliderMax.value = val;
+        albumMaxInput.value = val;
+    }
+    albumMinInput.value = val;
+});
+
+albumSliderMax.addEventListener('input', (e) => {
+    const val = parseInt(e.target.value);
+    if (val < parseInt(albumSliderMin.value)) {
+        albumSliderMin.value = val;
+        albumMinInput.value = val;
+    }
+    albumMaxInput.value = val;
+});
+
+albumMinInput.addEventListener('input', (e) => {
+    const val = parseInt(e.target.value);
+    if (val > parseInt(albumMaxInput.value)) {
+        albumMaxInput.value = val;
+        albumSliderMax.value = val;
+    }
+    albumSliderMin.value = val;
+});
+
+albumMaxInput.addEventListener('input', (e) => {
+    const val = parseInt(e.target.value);
+    if (val < parseInt(albumMinInput.value)) {
+        albumMinInput.value = val;
+        albumSliderMin.value = val;
+    }
+    albumSliderMax.value = val;
+});
+
+// Recherche dans les lieux
+locationSearch.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase();
+    const filtered = allLocations.filter(loc => 
+        loc.toLowerCase().includes(query)
+    );
+    renderLocationCheckboxes(filtered);
+});
+
+// Bouton appliquer les filtres
+applyFiltersBtn.addEventListener('click', () => {
+    // Récupérer les valeurs des filtres de date de création
+    filters.creationDateMin = parseInt(creationMinInput.value);
+    filters.creationDateMax = parseInt(creationMaxInput.value);
+    
+    // Récupérer les valeurs des filtres d'album
+    filters.firstAlbumMin = parseInt(albumMinInput.value);
+    filters.firstAlbumMax = parseInt(albumMaxInput.value);
+    
+    // Récupérer les membres sélectionnés
+    filters.members = [];
+    memberFilters.forEach(cb => {
+        if (cb.checked) {
+            const val = cb.value;
+            filters.members.push(val === '6+' ? '6+' : parseInt(val));
+        }
     });
+    
+    // Récupérer TOUS les lieux sélectionnés
+    // Important: parcourir TOUS les lieux possibles, pas seulement ceux affichés
+    filters.locations = [];
+    
+    // Méthode 1: Si aucune recherche de lieu n'est active, on peut lire directement les checkboxes
+    const searchQuery = locationSearch.value.toLowerCase().trim();
+    
+    if (searchQuery === '') {
+        // Pas de recherche active, on lit directement les checkboxes visibles
+        document.querySelectorAll('.location-filter').forEach(cb => {
+            if (cb.checked) {
+                filters.locations.push(cb.value);
+            }
+        });
+    } else {
+        // Il y a une recherche active, donc on doit vérifier tous les lieux
+        allLocations.forEach(loc => {
+            // Chercher si ce lieu a une checkbox actuellement affichée
+            const checkbox = Array.from(document.querySelectorAll('.location-filter'))
+                .find(cb => cb.value === loc);
+            
+            if (checkbox) {
+                // Le lieu est visible, on prend son état coché
+                if (checkbox.checked) {
+                    filters.locations.push(loc);
+                }
+            } else {
+                // Le lieu n'est pas visible (filtré par la recherche)
+                // On garde l'ancien état s'il était sélectionné
+                if (filters.locations.includes(loc)) {
+                    filters.locations.push(loc);
+                }
+            }
+        });
+    }
+    
+    console.log('Filtres appliqués:', filters);
+    
+    // Appliquer les filtres
+    applyFilters();
+});
+
+// Bouton réinitialiser les filtres
+resetFiltersBtn.addEventListener('click', () => {
+    // Réinitialiser tous les filtres
+    const creationYears = artists.map(a => a.creationDate);
+    const albumYears = artists.map(a => a.firstAlbumYear).filter(y => y > 0);
+    
+    const minCreation = Math.min(...creationYears);
+    const maxCreation = Math.max(...creationYears);
+    const minAlbum = Math.min(...albumYears);
+    const maxAlbum = Math.max(...albumYears);
+    
+    creationMinInput.value = minCreation;
+    creationMaxInput.value = maxCreation;
+    creationSliderMin.value = minCreation;
+    creationSliderMax.value = maxCreation;
+    
+    albumMinInput.value = minAlbum;
+    albumMaxInput.value = maxAlbum;
+    albumSliderMin.value = minAlbum;
+    albumSliderMax.value = maxAlbum;
+    
+    memberFilters.forEach(cb => cb.checked = true);
+    
+    document.querySelectorAll('.location-filter').forEach(cb => cb.checked = true);
+    
+    filters.creationDateMin = minCreation;
+    filters.creationDateMax = maxCreation;
+    filters.firstAlbumMin = minAlbum;
+    filters.firstAlbumMax = maxAlbum;
+    filters.members = [1, 2, 3, 4, 5, '6+'];
+    filters.locations = [...allLocations];
+    
+    applyFilters();
 });
 
 // Bouton retour

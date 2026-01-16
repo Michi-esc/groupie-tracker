@@ -49,11 +49,86 @@
                             <span class="icon">🔍</span>
                             <input type="text" id="search-input" placeholder="Tapez un nom ou un membre..." />
                         </div>
-                        <div class="pill-group" id="decade-filters">
-                            <button class="pill active" data-decade="all">Toutes les époques</button>
-                            <button class="pill" data-decade="60s">60-70</button>
-                            <button class="pill" data-decade="80s">80-90</button>
-                            <button class="pill" data-decade="modern">2000+</button>
+                        <button class="pill filter-toggle" id="filter-toggle">
+                            <span>🎛️ Filtres avancés</span>
+                        </button>
+                    </div>
+
+                    <!-- Panneau de filtres avancés -->
+                    <div id="filter-panel" class="filter-panel hidden">
+                        <div class="filter-section">
+                            <h4>📅 Date de création</h4>
+                            <div class="range-filter">
+                                <div class="range-inputs">
+                                    <input type="number" id="creation-min" placeholder="Min" min="1950" max="2024" />
+                                    <span>-</span>
+                                    <input type="number" id="creation-max" placeholder="Max" min="1950" max="2024" />
+                                </div>
+                                <div class="range-slider">
+                                    <input type="range" id="creation-slider-min" min="1950" max="2024" value="1950" step="1" />
+                                    <input type="range" id="creation-slider-max" min="1950" max="2024" value="2024" step="1" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="filter-section">
+                            <h4>💿 Année du premier album</h4>
+                            <div class="range-filter">
+                                <div class="range-inputs">
+                                    <input type="number" id="album-min" placeholder="Min" min="1950" max="2024" />
+                                    <span>-</span>
+                                    <input type="number" id="album-max" placeholder="Max" min="1950" max="2024" />
+                                </div>
+                                <div class="range-slider">
+                                    <input type="range" id="album-slider-min" min="1950" max="2024" value="1950" step="1" />
+                                    <input type="range" id="album-slider-max" min="1950" max="2024" value="2024" step="1" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="filter-section">
+                            <h4>👥 Nombre de membres</h4>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" value="1" class="member-filter" checked />
+                                    <span>Solo (1)</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" value="2" class="member-filter" checked />
+                                    <span>Duo (2)</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" value="3" class="member-filter" checked />
+                                    <span>Trio (3)</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" value="4" class="member-filter" checked />
+                                    <span>Quatuor (4)</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" value="5" class="member-filter" checked />
+                                    <span>Quintet (5)</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" value="6+" class="member-filter" checked />
+                                    <span>Groupe (6+)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="filter-section">
+                            <h4>📍 Lieux de concerts</h4>
+                            <div class="location-search">
+                                <input type="text" id="location-search" placeholder="Rechercher un lieu, ville, pays..." />
+                            </div>
+                            <div id="location-checkboxes" class="checkbox-group location-group">
+                                <!-- Généré dynamiquement par JavaScript -->
+                            </div>
+                        </div>
+
+                        <div class="filter-actions">
+                            <button class="btn-secondary" id="reset-filters">Réinitialiser</button>
+                            <button class="btn-primary" id="apply-filters">Appliquer les filtres</button>
                         </div>
                     </div>
 

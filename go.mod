@@ -5,6 +5,7 @@ go 1.25.0
 require fyne.io/fyne/v2 v2.7.2
 
 require (
+	fyne.io/fyne v1.4.3 // indirect
 	fyne.io/systray v1.12.0 // indirect
 	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
