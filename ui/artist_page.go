@@ -18,7 +18,7 @@ import (
 // ArtistPage affiche les détails d'un artiste avec design moderne
 func NewArtistPage(artist models.Artist, onBack func()) fyne.CanvasObject {
 	// === BOUTON RETOUR ===
-	backBtn := widget.NewButton("← Retour à la liste", onBack)
+	backBtn := widget.NewButton("← Back", onBack)
 	backBtn.Importance = widget.MediumImportance
 
 	// === HEADER ===
@@ -47,7 +47,7 @@ func NewArtistPage(artist models.Artist, onBack func()) fyne.CanvasObject {
 	titleText.Alignment = fyne.TextAlignCenter
 
 	// Badge année création
-	yearBadge := canvas.NewText(fmt.Sprintf("🎸 Créé en %d", artist.CreationDate), AccentCyan)
+	yearBadge := canvas.NewText(fmt.Sprintf("Created %d", artist.CreationDate), AccentCyan)
 	yearBadge.TextSize = 14
 	yearBadge.Alignment = fyne.TextAlignCenter
 
@@ -63,7 +63,7 @@ func NewArtistPage(artist models.Artist, onBack func()) fyne.CanvasObject {
 
 	membersList := container.NewVBox()
 	for _, member := range artist.Members {
-		memberItem := canvas.NewText("♪ "+member, TextLight)
+		memberItem := canvas.NewText(member, TextLight)
 		memberItem.TextSize = 13
 		membersList.Add(container.NewPadded(memberItem))
 	}
@@ -113,7 +113,7 @@ func NewArtistPage(artist models.Artist, onBack func()) fyne.CanvasObject {
 func loadConcertContent(artistID int) fyne.CanvasObject {
 	relations, err := models.FetchRelations()
 	if err != nil {
-		errorLabel := canvas.NewText("❌ Erreur lors du chargement des concerts", TextLight)
+		errorLabel := canvas.NewText("Error loading concerts", TextLight)
 		errorLabel.TextSize = 12
 		return errorLabel
 	}
@@ -141,7 +141,7 @@ func loadConcertContent(artistID int) fyne.CanvasObject {
 	sort.Strings(locations)
 
 	// Sections concerts
-	headerLabel := canvas.NewText(fmt.Sprintf("📍 %d lieux de concerts", len(locations)), TextWhite)
+	headerLabel := canvas.NewText(fmt.Sprintf("%d Locations", len(locations)), TextWhite)
 	headerLabel.TextStyle = fyne.TextStyle{Bold: true}
 	headerLabel.TextSize = 16
 
@@ -166,7 +166,7 @@ func createLocationItem(location string, dates []string) *fyne.Container {
 
 	// Titre du lieu avec drapeau
 	countryFlag := getCountryFlag(formattedLoc)
-	locationTitle := canvas.NewText(countryFlag+" 📌 "+formattedLoc, TextWhite)
+	locationTitle := canvas.NewText(countryFlag+" "+formattedLoc, TextWhite)
 	locationTitle.TextStyle = fyne.TextStyle{Bold: true}
 	locationTitle.TextSize = 14
 

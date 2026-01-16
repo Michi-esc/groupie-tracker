@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"groupie-tracker/models"
 	"image/color"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -22,6 +23,7 @@ type ArtistList struct {
 	artists        []models.Artist
 	allLocations   []string
 	onSelect       func(models.Artist)
+	onShowMap      func()
 	searchText     string
 	grid           *fyne.Container
 	searchDebounce *time.Timer
@@ -36,10 +38,9 @@ type ArtistList struct {
 }
 
 // NewArtistList crée une nouvelle liste d'artistes
-func NewArtistList(artists []models.Artist, onSelect func(models.Artist)) *fyne.Container {
+func NewArtistList(artists []models.Artist, onSelect func(models.Artist), onShowMap func()) *fyne.Container {
 	list := &ArtistList{
-		artists:      artists,
-		onSelect:     onSelect,
+		artists: artists, onShowMap: onShowMap, onSelect: onSelect,
 		memberCounts: make(map[int]bool),
 		selectedLocs: make(map[string]bool),
 	}
@@ -55,9 +56,12 @@ func NewArtistList(artists []models.Artist, onSelect func(models.Artist)) *fyne.
 	for i := 1; i <= 8; i++ {
 		list.memberCounts[i] = true
 	}
+	// Ajouter les locations initiales
 	for _, loc := range list.allLocations {
 		list.selectedLocs[loc] = true
 	}
+	// Important: On va aussi sélectionner "tout" pour ne pas filtrer au départ
+	// On réinitialisera après que les locations soient enrichies
 
 	// Variables pour stocker les callbacks de mise à jour
 	var updateLocationChecks func(string)
@@ -65,7 +69,10 @@ func NewArtistList(artists []models.Artist, onSelect func(models.Artist)) *fyne.
 	// Charger les locations de manière asynchrone
 	go func() {
 		relations, err := models.FetchRelations()
-		if err == nil && relations != nil {
+		if err != nil {
+			// En cas d'erreur, on continue quand même (les artistes s'affichent déjà)
+			log.Println("Erreur lors du chargement des relations:", err)
+		} else if relations != nil {
 			// Enrichir les artistes avec leurs locations
 			for i := range list.artists {
 				for _, rel := range relations.Index {
@@ -95,15 +102,17 @@ func NewArtistList(artists []models.Artist, onSelect func(models.Artist)) *fyne.
 			if updateLocationChecks != nil {
 				updateLocationChecks("")
 			}
-
-			// Rafraîchir la grille
-			list.rebuildGrid()
 		}
+
+		// Rafraîchir la grille une seule fois après le chargement des relations
+		fyne.Do(func() {
+			list.rebuildGrid()
+		})
 	}()
 
 	// Barre de recherche
 	searchEntry := widget.NewEntry()
-	searchEntry.SetPlaceHolder("🔍 Rechercher un artiste ou membre...")
+	searchEntry.SetPlaceHolder("Search artists or members...")
 	searchEntry.OnChanged = func(text string) {
 		list.searchText = strings.ToLower(text)
 		if list.searchDebounce != nil {
@@ -121,14 +130,21 @@ func NewArtistList(artists []models.Artist, onSelect func(models.Artist)) *fyne.
 	// Grille d'artistes - 4 colonnes
 	grid := container.New(layout.NewGridLayout(4))
 	list.grid = grid
+
+	// Reconstruire la grille immédiatement avec les artistes existants
 	list.rebuildGrid()
 
 	// Conteneur avec scroll
 	scroll := container.NewScroll(grid)
 
+	// Bouton pour voir la carte
+	mapButton := widget.NewButton("Map", list.onShowMap)
+	mapButton.Importance = widget.HighImportance
+
 	return container.NewBorder(
 		container.NewVBox(
-			widget.NewLabelWithStyle("🎵 Groupie Tracker", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+			widget.NewLabelWithStyle("GROUPIE TRACKER", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+			container.NewCenter(mapButton),
 			searchEntry,
 			filterPanel,
 			widget.NewSeparator(),
@@ -302,10 +318,10 @@ func (l *ArtistList) createFilterPanel() (*fyne.Container, *fyne.Container, func
 
 	// Accordion pour organiser les filtres
 	accordion := widget.NewAccordion(
-		widget.NewAccordionItem("📅 Date de création", creationFilter),
+		widget.NewAccordionItem("Creation Date", creationFilter),
 		widget.NewAccordionItem("💿 Année premier album", albumFilter),
 		widget.NewAccordionItem("👥 Nombre de membres", memberContainer),
-		widget.NewAccordionItem("📍 Lieux de concerts", locationFilter),
+		widget.NewAccordionItem("Locations", locationFilter),
 	)
 
 	return container.NewVBox(
@@ -340,8 +356,14 @@ func (l *ArtistList) rebuildGrid() {
 func (l *ArtistList) filteredArtists() []models.Artist {
 	res := make([]models.Artist, 0, len(l.artists))
 	st := l.searchText
+	seen := make(map[int]bool) // Éviter les doublons
 
 	for _, a := range l.artists {
+		// Vérifier si cet artiste a déjà été ajouté
+		if seen[a.ID] {
+			continue
+		}
+
 		// Filtre de recherche textuelle
 		matchesSearch := st == "" || strings.Contains(strings.ToLower(a.Name), st)
 		if !matchesSearch {
@@ -391,6 +413,7 @@ func (l *ArtistList) filteredArtists() []models.Artist {
 			continue
 		}
 
+		seen[a.ID] = true
 		res = append(res, a)
 	}
 	return res
