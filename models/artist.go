@@ -24,23 +24,6 @@ type Artist struct {
 	DatesList     []string `json:"-"` // Liste des dates de concert
 }
 
-// LocationData contient les lieux de concerts
-type LocationData struct {
-	Index []struct {
-		ID        int      `json:"id"`
-		Locations []string `json:"locations"`
-		Dates     string   `json:"dates"`
-	} `json:"index"`
-}
-
-// DatesData contient les dates de concerts
-type DatesData struct {
-	Index []struct {
-		ID    int      `json:"id"`
-		Dates []string `json:"dates"`
-	} `json:"index"`
-}
-
 // RelationData contient les relations entre lieux et dates
 type RelationData struct {
 	Index []struct {
@@ -51,8 +34,6 @@ type RelationData struct {
 
 var (
 	cachedArtists   []Artist
-	cachedLocations *LocationData
-	cachedDates     *DatesData
 	cachedRelations *RelationData
 	lastFetchTime   time.Time
 	cacheDuration   = 5 * time.Minute
@@ -85,48 +66,6 @@ func FetchArtists() ([]Artist, error) {
 	lastFetchTime = time.Now()
 
 	return artists, nil
-}
-
-// FetchLocations récupère les lieux de concerts
-func FetchLocations() (*LocationData, error) {
-	if time.Since(lastFetchTime) < cacheDuration && cachedLocations != nil {
-		return cachedLocations, nil
-	}
-
-	resp, err := http.Get("https://groupietrackers.herokuapp.com/api/locations")
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var locations LocationData
-	if err := json.NewDecoder(resp.Body).Decode(&locations); err != nil {
-		return nil, err
-	}
-
-	cachedLocations = &locations
-	return &locations, nil
-}
-
-// FetchDates récupère les dates de concerts
-func FetchDates() (*DatesData, error) {
-	if time.Since(lastFetchTime) < cacheDuration && cachedDates != nil {
-		return cachedDates, nil
-	}
-
-	resp, err := http.Get("https://groupietrackers.herokuapp.com/api/dates")
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var dates DatesData
-	if err := json.NewDecoder(resp.Body).Decode(&dates); err != nil {
-		return nil, err
-	}
-
-	cachedDates = &dates
-	return &dates, nil
 }
 
 // FetchRelations récupère les relations entre lieux et dates

@@ -3,18 +3,21 @@ package ui
 import (
 	"fmt"
 	"groupie-tracker/models"
+<<<<<<< HEAD
 	"image/color"
 	"io"
 	"net/http"
 	"strconv"
+=======
+>>>>>>> daba17f1232b7d87c4e05e37aeb4df8d950f091a
 	"strings"
-	"sync"
 	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -24,6 +27,7 @@ type ArtistList struct {
 	artists        []models.Artist
 	allLocations   []string
 	onSelect       func(models.Artist)
+	onShowMap      func()
 	searchText     string
 	grid           *fyne.Container
 	searchDebounce *time.Timer
@@ -38,8 +42,9 @@ type ArtistList struct {
 }
 
 // NewArtistList crée une nouvelle liste d'artistes
-func NewArtistList(artists []models.Artist, onSelect func(models.Artist)) *fyne.Container {
+func NewArtistList(artists []models.Artist, onSelect func(models.Artist), onShowMap func()) *fyne.Container {
 	list := &ArtistList{
+<<<<<<< HEAD
 		artists:      artists,
 		onSelect:     onSelect,
 		memberCounts: make(map[int]bool),
@@ -99,6 +104,42 @@ func NewArtistList(artists []models.Artist, onSelect func(models.Artist)) *fyne.
 	// Barre de recherche
 	searchEntry := widget.NewEntry()
 	searchEntry.SetPlaceHolder("🔍 Rechercher un artiste ou membre...")
+=======
+		artists:   artists,
+		onSelect:  onSelect,
+		onShowMap: onShowMap,
+	}
+
+	// === HEADER ===
+	titleText := canvas.NewText("🎵 Groupie Tracker", TextWhite)
+	titleText.TextStyle = fyne.TextStyle{Bold: true}
+	titleText.TextSize = 36
+	titleText.Alignment = fyne.TextAlignCenter
+
+	subtitleText := canvas.NewText("Découvrez vos artistes musicaux préférés", TextLight)
+	subtitleText.TextSize = 14
+	subtitleText.Alignment = fyne.TextAlignCenter
+
+	// Bouton pour voir la carte
+	mapButton := widget.NewButton("🗺️ Voir la carte des concerts", list.onShowMap)
+	mapButton.Importance = widget.HighImportance
+
+	headerBg := canvas.NewRectangle(BgDarker)
+	header := container.NewMax(
+		headerBg,
+		container.NewVBox(
+			widget.NewLabel(""), // Spacer
+			container.NewCenter(titleText),
+			container.NewCenter(subtitleText),
+			container.NewCenter(mapButton),
+			widget.NewLabel(""), // Spacer
+		),
+	)
+
+	// === BARRE DE RECHERCHE ===
+	searchEntry := widget.NewEntry()
+	searchEntry.SetPlaceHolder("🔍 Rechercher un artiste ou un membre...")
+>>>>>>> daba17f1232b7d87c4e05e37aeb4df8d950f091a
 	searchEntry.OnChanged = func(text string) {
 		list.searchText = strings.ToLower(text)
 		if list.searchDebounce != nil {
@@ -109,27 +150,46 @@ func NewArtistList(artists []models.Artist, onSelect func(models.Artist)) *fyne.
 		})
 	}
 
+<<<<<<< HEAD
 	// Panneau de filtres
 	filterPanel, _, updateLocationChecksFunc := list.createFilterPanel()
 	updateLocationChecks = updateLocationChecksFunc
 
 	// Grille d'artistes - 4 par ligne
 	grid := container.New(layout.NewGridLayout(4))
+=======
+	// Grille d'artistes - 4 colonnes
+	grid := container.New(
+		layout.NewGridLayout(4),
+	)
+>>>>>>> daba17f1232b7d87c4e05e37aeb4df8d950f091a
 	list.grid = grid
 	list.rebuildGrid()
 
 	// Conteneur avec scroll
 	scroll := container.NewScroll(grid)
 
+<<<<<<< HEAD
 	return container.NewBorder(
 		container.NewVBox(
 			widget.NewLabelWithStyle("🎵 Groupie Tracker", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 			searchEntry,
 			filterPanel,
 			widget.NewSeparator(),
+=======
+	// Créer un container pour la recherche avec fond
+	searchContainer := container.NewVBox(searchEntry)
+
+	// Layout avec BorderLayout - header en haut, search juste après, scroll au centre
+	return container.New(
+		layout.NewBorderLayout(header, nil, nil, nil),
+		header,
+		container.New(
+			layout.NewBorderLayout(searchContainer, nil, nil, nil),
+			searchContainer,
+			scroll,
+>>>>>>> daba17f1232b7d87c4e05e37aeb4df8d950f091a
 		),
-		nil, nil, nil,
-		scroll,
 	)
 }
 
@@ -312,11 +372,20 @@ func (l *ArtistList) rebuildGrid() {
 	if l.grid == nil {
 		return
 	}
-	// Réinitialiser les objets
 	l.grid.Objects = []fyne.CanvasObject{}
-	for _, artist := range l.filteredArtists() {
-		card := createArtistCard(artist, l.onSelect)
-		l.grid.Add(card) // Pas de padding supplémentaire pour un alignement correct
+	filteredList := l.filteredArtists()
+
+	if len(filteredList) == 0 {
+		// Message "aucun résultat"
+		msgText := canvas.NewText("Aucun résultat trouvé", TextLight)
+		msgText.TextSize = 16
+		msgText.Alignment = fyne.TextAlignCenter
+		l.grid.Add(container.NewCenter(msgText))
+	} else {
+		for _, artist := range filteredList {
+			card := createArtistCard(artist, l.onSelect)
+			l.grid.Add(card)
+		}
 	}
 	l.grid.Refresh()
 }
@@ -462,104 +531,54 @@ func normalizeLocation(loc string) string {
 }
 
 func createArtistCard(artist models.Artist, onSelect func(models.Artist)) *fyne.Container {
-	// Image de l'artiste (chargement asynchrone avec cache)
-	img := canvas.NewImageFromResource(nil)
+	// Image de l'artiste (chargement simple)
+	uri, _ := storage.ParseURI(artist.Image)
+	img := canvas.NewImageFromURI(uri)
 	img.FillMode = canvas.ImageFillContain
-	img.SetMinSize(fyne.NewSize(200, 200))
-	loadImageAsync(img, artist.Image)
+	img.SetMinSize(fyne.NewSize(220, 200))
 
-	// Nom de l'artiste en noir et centré sous l'image
-	nameText := canvas.NewText(artist.Name, color.Black)
+	// Nom de l'artiste
+	nameText := canvas.NewText(artist.Name, TextWhite)
 	nameText.TextStyle = fyne.TextStyle{Bold: true}
+	nameText.TextSize = 16
 	nameText.Alignment = fyne.TextAlignCenter
-	// Afficher le nom juste sous l'image avec un fond discret
-	captionBg := canvas.NewRectangle(color.RGBA{R: 235, G: 235, B: 235, A: 255})
-	caption := container.NewMax(
-		captionBg,
-		container.NewPadded(container.NewCenter(nameText)),
-	)
 
 	// Informations
-	members := widget.NewLabel(fmt.Sprintf("%d membres", len(artist.Members)))
-	members.Alignment = fyne.TextAlignCenter
+	infoMembers := canvas.NewText(fmt.Sprintf("👥 %d membres", len(artist.Members)), TextLight)
+	infoMembers.TextSize = 12
+	infoMembers.Alignment = fyne.TextAlignCenter
 
-	created := widget.NewLabel(fmt.Sprintf("Créé en %d", artist.CreationDate))
-	created.Alignment = fyne.TextAlignCenter
+	infoCreated := canvas.NewText(fmt.Sprintf("🎸 Créé en %d", artist.CreationDate), TextLight)
+	infoCreated.TextSize = 12
+	infoCreated.Alignment = fyne.TextAlignCenter
 
-	// Bouton pour voir les détails (plus grand et mis en avant)
-	btn := widget.NewButton("Voir les détails", func() {
+	// Bouton "Voir les détails"
+	btn := widget.NewButton("→ Voir les détails", func() {
 		onSelect(artist)
 	})
 	btn.Importance = widget.HighImportance
-	// Adapter la taille du bouton pour correspondre aux pixels de la carte
-	btnBox := container.NewGridWrap(fyne.NewSize(220, 44), btn)
 
-	// Card container
-	card := container.NewVBox(
+	// Layout de la carte
+	cardContent := container.NewVBox(
 		img,
-		caption,
-		members,
-		created,
-		container.NewCenter(btnBox),
+		widget.NewLabel(""), // Spacer
+		container.NewCenter(nameText),
+		container.NewCenter(infoMembers),
+		container.NewCenter(infoCreated),
+		widget.NewLabel(""), // Spacer
+		btn,
 	)
 
-	// Fond avec bordure
-	bg := canvas.NewRectangle(color.RGBA{R: 240, G: 240, B: 240, A: 255})
+	// Fond de la carte avec bordure
+	cardBg := canvas.NewRectangle(CardBg)
+	cardBgBorder := canvas.NewRectangle(AccentCyan)
+	cardBgBorder.StrokeWidth = 2
 
+	// Card container avec padding
 	return container.New(
 		layout.NewMaxLayout(),
-		bg,
-		container.NewPadded(card),
+		cardBgBorder,
+		cardBg,
+		container.NewPadded(cardContent),
 	)
-}
-
-// --- Chargement d'images optimisé (cache + async) ---
-var imgCacheMu sync.Mutex
-var imageCache = map[string]fyne.Resource{}
-
-func loadImageAsync(img *canvas.Image, url string) {
-	if res := getCachedResource(url); res != nil {
-		img.Resource = res
-		img.Refresh()
-		return
-	}
-	go func() {
-		res, err := fetchImageResource(url)
-		if err != nil || res == nil {
-			return
-		}
-		// Mettre à jour directement l'image après chargement
-		img.Resource = res
-		img.Refresh()
-	}()
-}
-
-func getCachedResource(url string) fyne.Resource {
-	imgCacheMu.Lock()
-	defer imgCacheMu.Unlock()
-	return imageCache[url]
-}
-
-func setCachedResource(url string, res fyne.Resource) {
-	imgCacheMu.Lock()
-	imageCache[url] = res
-	imgCacheMu.Unlock()
-}
-
-func fetchImageResource(url string) (fyne.Resource, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("image HTTP %d", resp.StatusCode)
-	}
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	res := fyne.NewStaticResource(url, data)
-	setCachedResource(url, res)
-	return res, nil
 }

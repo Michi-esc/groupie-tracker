@@ -27,10 +27,13 @@ func NewWindow(app fyne.App) *Window {
 	}
 }
 
-// SetContent change le contenu de la fenêtre
+// SetContent change le contenu de la fenêtre (thread-safe)
 func (w *Window) SetContent(content fyne.CanvasObject) {
-	w.Content.Objects = []fyne.CanvasObject{content}
-	w.Content.Refresh()
+	// S'assurer que la modification se fait dans le thread UI de Fyne
+	fyne.Do(func() {
+		w.Content.Objects = []fyne.CanvasObject{content}
+		w.Content.Refresh()
+	})
 }
 
 // ShowLoading affiche un indicateur de chargement
