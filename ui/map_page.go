@@ -149,9 +149,6 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 		go func() {
 			for coords := range resultChan {
 				if coords != nil {
-					cacheMutex.Lock()
-					_ = coords
-					cacheMutex.Unlock()
 					locations = append(locations, coords)
 					countChan <- true
 				}
