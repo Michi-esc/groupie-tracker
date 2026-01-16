@@ -11,14 +11,18 @@
             box-sizing: border-box;
         }
 
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
             min-height: 100vh;
             color: #333;
         }
 
-        /* Loader */
+        /* ============ LOADER ============ */
         .loader {
             display: flex;
             flex-direction: column;
@@ -26,15 +30,18 @@
             align-items: center;
             height: 100vh;
             color: white;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            gap: 30px;
         }
 
         .spinner {
-            border: 5px solid rgba(255, 255, 255, 0.3);
-            border-top: 5px solid white;
+            border: 6px solid rgba(255, 255, 255, 0.1);
+            border-top: 6px solid #00d4ff;
+            border-right: 6px solid #ff006e;
             border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            animation: spin 1s linear infinite;
+            width: 80px;
+            height: 80px;
+            animation: spin 1.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
         }
 
         @keyframes spin {
@@ -42,182 +49,409 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Pages */
+        .loader p {
+            font-size: 1.3rem;
+            font-weight: 500;
+            letter-spacing: 2px;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+
+        /* ============ PAGES ============ */
         .page {
             min-height: 100vh;
-            padding: 20px;
+            padding: 40px 20px;
+            animation: fadeIn 0.6s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .hidden {
             display: none !important;
         }
 
-        /* Header */
+        /* ============ HEADER ============ */
         header {
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 60px;
+            animation: slideDown 0.8s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         header h1 {
             color: white;
-            font-size: 3rem;
-            margin-bottom: 20px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-size: 3.5rem;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #00d4ff 0%, #ff006e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 800;
+            letter-spacing: -1px;
         }
 
+        header .subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.1rem;
+            font-weight: 300;
+            margin-bottom: 40px;
+            letter-spacing: 1px;
+        }
+
+        /* ============ SEARCH BAR ============ */
         .search-bar {
-            max-width: 600px;
+            max-width: 700px;
             margin: 0 auto;
+            position: relative;
         }
 
         .search-bar input {
             width: 100%;
-            padding: 15px 20px;
+            padding: 18px 50px 18px 24px;
             font-size: 1.1rem;
-            border: none;
+            border: 2px solid transparent;
             border-radius: 50px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
             outline: none;
-            transition: transform 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            color: #333;
+        }
+
+        .search-bar input::placeholder {
+            color: #999;
         }
 
         .search-bar input:focus {
-            transform: scale(1.02);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            transform: translateY(-3px);
+            border-color: #00d4ff;
+            box-shadow: 0 15px 50px rgba(0, 212, 255, 0.3);
+            background: white;
         }
 
-        /* Grille d'artistes */
+        .search-bar::before {
+            content: '🔍';
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.3rem;
+            pointer-events: none;
+        }
+
+        /* ============ GRILLE D'ARTISTES ============ */
         .artist-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 30px;
-            max-width: 1400px;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 40px;
+            max-width: 1600px;
             margin: 0 auto;
+            padding: 0 20px;
         }
 
-        /* Carte artiste */
+        /* ============ CARTE ARTISTE ============ */
         .artist-card {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
             cursor: pointer;
-            transition: all 0.3s ease;
-            text-align: center;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            group: 1;
+        }
+
+        .artist-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+            z-index: 1;
+        }
+
+        .artist-card:hover::before {
+            left: 100%;
         }
 
         .artist-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+            transform: translateY(-15px) scale(1.05);
+            box-shadow: 0 25px 60px rgba(0, 212, 255, 0.3);
         }
 
         .artist-card img {
             width: 100%;
-            height: 200px;
+            height: 250px;
             object-fit: cover;
-            border-radius: 10px;
-            margin-bottom: 15px;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            display: block;
+        }
+
+        .artist-card:hover img {
+            transform: scale(1.08);
+        }
+
+        .artist-card-content {
+            padding: 25px;
         }
 
         .artist-card h3 {
-            font-size: 1.5rem;
-            margin-bottom: 10px;
-            color: #667eea;
+            font-size: 1.6rem;
+            margin-bottom: 8px;
+            color: #0f0c29;
+            font-weight: 700;
+            transition: color 0.3s;
+        }
+
+        .artist-card:hover h3 {
+            background: linear-gradient(135deg, #00d4ff 0%, #ff006e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .artist-card .year {
+            color: #888;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .artist-card .member-count {
+            margin-top: 10px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
             color: #666;
-            font-size: 1rem;
+            font-size: 0.9rem;
         }
 
-        /* Page de détail */
-        .artist-detail {
-            max-width: 900px;
+        /* ============ PAGE DETAIL ============ */
+        .detail-container {
+            max-width: 1100px;
             margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
         }
 
-        .artist-detail h2 {
-            font-size: 2.5rem;
-            color: #667eea;
-            margin-bottom: 20px;
-            text-align: center;
+        .back-button {
+            background: linear-gradient(135deg, #00d4ff 0%, #ff006e 100%);
+            color: white;
+            border: none;
+            padding: 14px 35px;
+            font-size: 1.05rem;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-bottom: 40px;
+            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0, 212, 255, 0.5);
+        }
+
+        .back-button:active {
+            transform: translateY(-1px);
+        }
+
+        .artist-detail {
+            background: white;
+            border-radius: 25px;
+            padding: 50px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .detail-header {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 50px;
+            align-items: center;
+            margin-bottom: 50px;
+        }
+
+        .detail-image-wrapper {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
         }
 
         .artist-detail img {
             width: 100%;
-            max-width: 400px;
-            height: auto;
-            border-radius: 15px;
+            height: 400px;
+            object-fit: cover;
             display: block;
-            margin: 0 auto 30px;
+            transition: transform 0.5s ease-out;
         }
 
+        .detail-image-wrapper:hover img {
+            transform: scale(1.05);
+        }
+
+        .detail-info-header {
+            padding: 20px 0;
+        }
+
+        .artist-detail h2 {
+            font-size: 3rem;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 20px;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .creation-year {
+            display: inline-block;
+            background: linear-gradient(135deg, #00d4ff 0%, #ff006e 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 15px 0;
+        }
+
+        .first-album {
+            color: #666;
+            font-size: 1.1rem;
+            margin-top: 10px;
+        }
+
+        /* ============ SECTIONS INFO ============ */
         .artist-info {
-            margin-bottom: 30px;
+            margin-bottom: 50px;
+            padding: 35px;
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.08) 0%, rgba(255, 0, 110, 0.08) 100%);
+            border-radius: 20px;
+            border-left: 5px solid transparent;
+            border-image: linear-gradient(135deg, #00d4ff 0%, #ff006e 100%) 1;
+            transition: all 0.3s ease;
+        }
+
+        .artist-info:hover {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transform: translateX(5px);
         }
 
         .artist-info h3 {
-            font-size: 1.5rem;
-            color: #764ba2;
-            margin-bottom: 10px;
-            border-bottom: 2px solid #764ba2;
-            padding-bottom: 5px;
+            font-size: 1.6rem;
+            color: #0f0c29;
+            margin-bottom: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
-        .artist-info p, .artist-info ul {
-            font-size: 1.1rem;
+        .artist-info p {
+            font-size: 1.05rem;
             line-height: 1.8;
             color: #555;
+            margin-bottom: 10px;
+        }
+
+        .artist-info p strong {
+            color: #0f0c29;
+            font-weight: 600;
         }
 
         .artist-info ul {
             list-style: none;
-            padding-left: 20px;
+            padding: 0;
         }
 
-        .artist-info ul li::before {
-            content: "🎤 ";
-            margin-right: 10px;
-        }
-
-        .locations-list, .dates-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .location-item, .date-item {
-            background: #f0f0f0;
-            padding: 10px;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        /* Bouton retour */
-        .back-button {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 12px 30px;
+        .artist-info ul li {
             font-size: 1.1rem;
-            border-radius: 50px;
-            cursor: pointer;
-            margin: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            line-height: 2;
+            color: #555;
+            padding: 8px 0;
+            padding-left: 30px;
+            position: relative;
             transition: all 0.3s ease;
         }
 
-        .back-button:hover {
-            background: #764ba2;
-            transform: scale(1.05);
+        .artist-info ul li:hover {
+            padding-left: 40px;
+            color: #00d4ff;
         }
 
-        /* Message d'erreur */
+        .artist-info ul li::before {
+            content: '♪';
+            position: absolute;
+            left: 0;
+            font-size: 1.3rem;
+            color: #ff006e;
+        }
+
+        /* ============ LISTES (LOCATIONS & DATES) ============ */
+        .locations-list, .dates-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .location-item, .date-item {
+            background: linear-gradient(135deg, white 0%, rgba(255, 255, 255, 0.9) 100%);
+            padding: 20px 15px;
+            border-radius: 15px;
+            text-align: center;
+            font-weight: 600;
+            color: #0f0c29;
+            border: 2px solid transparent;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            cursor: default;
+        }
+
+        .location-item {
+            border-color: #00d4ff;
+        }
+
+        .location-item:hover {
+            border-color: #00d4ff;
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.2);
+            transform: translateY(-8px);
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.05) 0%, rgba(0, 212, 255, 0.02) 100%);
+        }
+
+        .date-item {
+            border-color: #ff006e;
+        }
+
+        .date-item:hover {
+            border-color: #ff006e;
+            box-shadow: 0 10px 30px rgba(255, 0, 110, 0.2);
+            transform: translateY(-8px);
+            background: linear-gradient(135deg, rgba(255, 0, 110, 0.05) 0%, rgba(255, 0, 110, 0.02) 100%);
+        }
+
+        /* ============ MESSAGE D'ERREUR ============ */
         .error-message {
             display: flex;
             flex-direction: column;
@@ -226,50 +460,202 @@
             height: 100vh;
             color: white;
             text-align: center;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            gap: 30px;
         }
 
         .error-message h2 {
-            font-size: 3rem;
-            margin-bottom: 20px;
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin: 0;
         }
 
         .error-message p {
-            font-size: 1.5rem;
-            margin-bottom: 30px;
+            font-size: 1.3rem;
+            margin: 0;
+            color: rgba(255, 255, 255, 0.8);
+            max-width: 600px;
         }
 
         .error-message button {
-            background: white;
-            color: #667eea;
+            background: linear-gradient(135deg, #00d4ff 0%, #ff006e 100%);
+            color: white;
             border: none;
-            padding: 15px 40px;
-            font-size: 1.2rem;
+            padding: 16px 45px;
+            font-size: 1.1rem;
             border-radius: 50px;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 600;
+            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.3);
         }
 
         .error-message button:hover {
-            transform: scale(1.1);
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0, 212, 255, 0.5);
         }
 
-        /* Responsive */
-        @media (max-width: 768px) {
+        /* ============ RESPONSIVE ============ */
+        @media (max-width: 1024px) {
+            .detail-header {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+
+            .artist-detail {
+                padding: 35px;
+            }
+
+            .artist-detail h2 {
+                font-size: 2.5rem;
+            }
+
             header h1 {
-                font-size: 2rem;
+                font-size: 2.8rem;
+            }
+
+            .artist-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 25px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .page {
+                padding: 20px 15px;
+            }
+
+            header h1 {
+                font-size: 2.2rem;
+            }
+
+            header .subtitle {
+                font-size: 1rem;
+                margin-bottom: 25px;
+            }
+
+            .search-bar input {
+                padding: 15px 45px 15px 18px;
+                font-size: 1rem;
             }
 
             .artist-grid {
                 grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-                gap: 20px;
+                gap: 15px;
+                padding: 0;
+            }
+
+            .artist-card {
+                border-radius: 15px;
+            }
+
+            .artist-card img {
+                height: 180px;
+            }
+
+            .artist-card-content {
+                padding: 15px;
+            }
+
+            .artist-card h3 {
+                font-size: 1.3rem;
             }
 
             .artist-detail {
                 padding: 20px;
+                border-radius: 20px;
             }
 
             .artist-detail h2 {
                 font-size: 2rem;
+            }
+
+            .artist-info {
+                padding: 20px;
+                margin-bottom: 30px;
+            }
+
+            .detail-image-wrapper {
+                border-radius: 15px;
+            }
+
+            .artist-detail img {
+                height: 300px;
+            }
+
+            .locations-list, .dates-list {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                gap: 10px;
+            }
+
+            .location-item, .date-item {
+                padding: 15px 10px;
+                font-size: 0.95rem;
+                border-radius: 12px;
+            }
+
+            .back-button {
+                padding: 12px 25px;
+                font-size: 1rem;
+                margin-bottom: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            header .subtitle {
+                font-size: 0.95rem;
+                margin-bottom: 20px;
+            }
+
+            .search-bar input {
+                padding: 13px 40px 13px 16px;
+                font-size: 0.95rem;
+            }
+
+            .artist-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .artist-card img {
+                height: 150px;
+            }
+
+            .artist-card h3 {
+                font-size: 1.2rem;
+            }
+
+            .artist-detail {
+                padding: 15px;
+            }
+
+            .artist-detail h2 {
+                font-size: 1.7rem;
+                margin-bottom: 15px;
+            }
+
+            .artist-info {
+                padding: 15px;
+                margin-bottom: 20px;
+            }
+
+            .artist-info h3 {
+                font-size: 1.3rem;
+                margin-bottom: 15px;
+            }
+
+            .locations-list, .dates-list {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            .location-item, .date-item {
+                padding: 12px 10px;
+                font-size: 0.9rem;
             }
         }
     </style>
@@ -285,8 +671,9 @@
     <div id="artist-list-page" class="page hidden">
         <header>
             <h1>🎵 Groupie Tracker</h1>
+            <p class="subtitle">Découvrez vos artistes musicaux préférés</p>
             <div class="search-bar">
-                <input type="text" id="search-input" placeholder="Rechercher un artiste... (Ctrl+F)" />
+                <input type="text" id="search-input" placeholder="Rechercher un artiste ou un membre..." />
             </div>
         </header>
 
@@ -299,10 +686,12 @@
 
     <!-- Page de détail d'un artiste -->
     <div id="artist-detail-page" class="page hidden">
-        <button id="back-button" class="back-button">← Retour</button>
-        
-        <div id="artist-detail" class="artist-detail">
-            <!-- Le contenu sera généré par JavaScript -->
+        <div class="detail-container">
+            <button id="back-button" class="back-button">← Retour à la liste</button>
+            
+            <div id="artist-detail" class="artist-detail">
+                <!-- Le contenu sera généré par JavaScript -->
+            </div>
         </div>
     </div>
 
@@ -456,15 +845,24 @@
         function renderArtistGrid(artistList) {
             artistGrid.innerHTML = '';
             
-            artistList.forEach(artist => {
+            if (artistList.length === 0) {
+                artistGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: white; padding: 60px 20px;"><h2 style="font-size: 2rem; margin-bottom: 10px;">Aucun résultat</h2><p style="font-size: 1.1rem; opacity: 0.8;">Essayez une autre recherche</p></div>';
+                return;
+            }
+            
+            artistList.forEach((artist, index) => {
                 const card = document.createElement('div');
                 card.className = 'artist-card';
                 card.onclick = () => showArtistDetail(artist);
+                card.style.animation = `fadeIn 0.6s ease-out ${index * 0.1}s both`;
                 
                 card.innerHTML = `
-                    <img src="${artist.image}" alt="${artist.name}" onerror="this.src='https://via.placeholder.com/400x200?text=${artist.name}'">
-                    <h3>${artist.name}</h3>
-                    <p class="year">Créé en ${artist.creationDate}</p>
+                    <img src="${artist.image}" alt="${artist.name}" onerror="this.src='https://via.placeholder.com/400x250?text=${encodeURIComponent(artist.name)}'">
+                    <div class="artist-card-content">
+                        <h3>${artist.name}</h3>
+                        <p class="year">Formé en ${artist.creationDate}</p>
+                        <div class="member-count">👥 ${artist.members.length} membres</div>
+                    </div>
                 `;
                 
                 artistGrid.appendChild(card);
@@ -474,18 +872,19 @@
         // Générer la page de détail
         function renderArtistDetail(artist) {
             artistDetail.innerHTML = `
-                <img src="${artist.image}" alt="${artist.name}" onerror="this.src='https://via.placeholder.com/400x300?text=${artist.name}'">
-                
-                <h2>${artist.name}</h2>
-                
-                <div class="artist-info">
-                    <h3>📅 Informations</h3>
-                    <p><strong>Créé en :</strong> ${artist.creationDate}</p>
-                    <p><strong>Premier album :</strong> ${artist.firstAlbum}</p>
+                <div class="detail-header">
+                    <div class="detail-image-wrapper">
+                        <img src="${artist.image}" alt="${artist.name}" onerror="this.src='https://via.placeholder.com/400x500?text=${encodeURIComponent(artist.name)}'">
+                    </div>
+                    <div class="detail-info-header">
+                        <h2>${artist.name}</h2>
+                        <div class="creation-year">🎸 Formé en ${artist.creationDate}</div>
+                        <p class="first-album"><strong>Premier album :</strong> ${artist.firstAlbum}</p>
+                    </div>
                 </div>
                 
                 <div class="artist-info">
-                    <h3>👥 Membres</h3>
+                    <h3>👥 Membres du groupe</h3>
                     <ul>
                         ${artist.members.map(member => `<li>${member}</li>`).join('')}
                     </ul>
@@ -493,6 +892,7 @@
                 
                 <div class="artist-info">
                     <h3>📍 Lieux de concert</h3>
+                    <p>Les villes où le groupe s'est produit :</p>
                     <div class="locations-list">
                         ${artist.locations.map(loc => `<div class="location-item">${loc}</div>`).join('')}
                     </div>
@@ -500,6 +900,7 @@
                 
                 <div class="artist-info">
                     <h3>🎫 Dates de concert</h3>
+                    <p>Prochains concerts prévus :</p>
                     <div class="dates-list">
                         ${artist.concertDates.map(date => `<div class="date-item">${date}</div>`).join('')}
                     </div>
