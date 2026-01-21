@@ -3,7 +3,6 @@ package ui
 import (
 	"fmt"
 	"groupie-tracker/models"
-	"image/color"
 	"log"
 	"strconv"
 	"strings"
@@ -17,7 +16,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-// ArtistList affiche la liste des artistes
+// widget liste artistes
 type ArtistList struct {
 	widget.BaseWidget
 	artists        []models.Artist
@@ -28,7 +27,7 @@ type ArtistList struct {
 	grid           *fyne.Container
 	searchDebounce *time.Timer
 
-	// Filtres
+	// filtres mémorisés
 	creationMin  int
 	creationMax  int
 	albumMin     int
@@ -37,47 +36,51 @@ type ArtistList struct {
 	selectedLocs map[string]bool
 }
 
-// NewArtistList crée une nouvelle liste d'artistes
+// build liste artistes
 func NewArtistList(artists []models.Artist, onSelect func(models.Artist), onShowMap func()) *fyne.Container {
+	return NewArtistListWithWindow(nil, artists, onSelect, onShowMap)
+}
+
+// build liste artistes avec window pour bouton langue
+func NewArtistListWithWindow(win *Window, artists []models.Artist, onSelect func(models.Artist), onShowMap func()) *fyne.Container {
 	list := &ArtistList{
 		artists: artists, onShowMap: onShowMap, onSelect: onSelect,
 		memberCounts: make(map[int]bool),
 		selectedLocs: make(map[string]bool),
 	}
 
-	// Initialiser les valeurs min/max pour les filtres
+	// bornes min/max pour filtres
 	list.creationMin, list.creationMax = getCreationYearRange(artists)
 	list.albumMin, list.albumMax = getFirstAlbumYearRange(artists)
 
-	// Extraire toutes les locations uniques
+	// récupère les lieux uniques
 	list.allLocations = extractAllLocations(artists)
 
-	// Par défaut, tout est sélectionné
+	// par défaut on coche tout
 	for i := 1; i <= 8; i++ {
 		list.memberCounts[i] = true
 	}
-	// Ajouter les locations initiales
+	// on ajoute les lieux initiaux
 	for _, loc := range list.allLocations {
 		list.selectedLocs[loc] = true
 	}
-	// Important: On va aussi sélectionner "tout" pour ne pas filtrer au départ
-	// On réinitialisera après que les locations soient enrichies
+	// on coche tout pour ne rien filtrer au début, on ajustera après enrichissement
 
-	// Variables pour stocker les callbacks de mise à jour
+	// on garde le callback pour rafraîchir les cases
 	var updateLocationChecks func(string)
 
-	// Charger les locations de manière asynchrone
+	// charge les relations en async
 	go func() {
 		relations, err := models.FetchRelations()
 		if err != nil {
-			// En cas d'erreur, on continue quand même (les artistes s'affichent déjà)
+			// si ça rate on continue quand même
 			log.Println("Erreur lors du chargement des relations:", err)
 		} else if relations != nil {
-			// Enrichir les artistes avec leurs locations
+			// enrichit chaque artiste avec ses lieux
 			for i := range list.artists {
 				for _, rel := range relations.Index {
 					if rel.ID == list.artists[i].ID {
-						// Extraire les locations uniques depuis DatesLocations
+						// extrait les lieux uniques depuis datesLocations
 						locSet := make(map[string]bool)
 						for loc := range rel.DatesLocations {
 							locSet[loc] = true
@@ -90,61 +93,70 @@ func NewArtistList(artists []models.Artist, onSelect func(models.Artist), onShow
 				}
 			}
 
-			// Mettre à jour les locations disponibles
+			// on met à jour la liste des lieux
 			list.allLocations = extractAllLocations(list.artists)
 
-			// Initialiser tous les lieux comme sélectionnés
+			// on coche tous les lieux
 			for _, loc := range list.allLocations {
 				list.selectedLocs[loc] = true
 			}
 
-			// Rafraîchir les checkboxes de lieux si elles existent
+			// rafraîchit les cases si déjà affichées
 			if updateLocationChecks != nil {
 				updateLocationChecks("")
 			}
 		}
 
-		// Rafraîchir la grille une seule fois après le chargement des relations
+		// on rafraîchit la grille une fois
 		fyne.Do(func() {
 			list.rebuildGrid()
 		})
 	}()
 
-	// Barre de recherche
+	// barre de recherche
 	searchEntry := widget.NewEntry()
-	searchEntry.SetPlaceHolder("Search artists or members...")
+	searchEntry.SetPlaceHolder(T().SearchPlaceholder)
 	searchEntry.OnChanged = func(text string) {
 		list.searchText = strings.ToLower(text)
 		if list.searchDebounce != nil {
 			list.searchDebounce.Stop()
 		}
 		list.searchDebounce = time.AfterFunc(200*time.Millisecond, func() {
-			list.rebuildGrid()
+			fyne.Do(func() {
+				list.rebuildGrid()
+			})
 		})
 	}
 
-	// Panneau de filtres
+	// panneau de filtres
 	filterPanel, _, updateLocationChecksFunc := list.createFilterPanel()
 	updateLocationChecks = updateLocationChecksFunc
 
-	// Grille d'artistes - 4 colonnes
+	// grille d'artistes (4 colonnes)
 	grid := container.New(layout.NewGridLayout(4))
 	list.grid = grid
 
-	// Reconstruire la grille immédiatement avec les artistes existants
+	// on construit la grille dès le départ
 	list.rebuildGrid()
 
-	// Conteneur avec scroll
+	// conteneur scroll
 	scroll := container.NewScroll(grid)
 
-	// Bouton pour voir la carte
-	mapButton := widget.NewButton("Map", list.onShowMap)
+	// bouton pour ouvrir la carte
+	mapButton := widget.NewButton(T().ShowMap, list.onShowMap)
 	mapButton.Importance = widget.HighImportance
+
+	// barre de boutons
+	topButtons := container.NewHBox()
+	if win != nil && win.LangButton != nil {
+		topButtons.Add(win.LangButton)
+	}
+	topButtons.Add(mapButton)
 
 	return container.NewBorder(
 		container.NewVBox(
-			widget.NewLabelWithStyle("GROUPIE TRACKER", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-			container.NewCenter(mapButton),
+			widget.NewLabelWithStyle(T().WindowTitle, fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+			container.NewCenter(topButtons),
 			searchEntry,
 			filterPanel,
 			widget.NewSeparator(),
@@ -156,22 +168,22 @@ func NewArtistList(artists []models.Artist, onSelect func(models.Artist), onShow
 	)
 }
 
-// createFilterPanel crée le panneau de filtres
+// panneau filtres
 func (l *ArtistList) createFilterPanel() (*fyne.Container, *fyne.Container, func(string)) {
-	// Filtre date de création
-	creationLabel := widget.NewLabel(fmt.Sprintf("Date de création: %d - %d", l.creationMin, l.creationMax))
+	// filtre date de création
+	creationLabel := widget.NewLabel(fmt.Sprintf(T().CreationYear+": %d - %d", l.creationMin, l.creationMax))
 	creationMinEntry := widget.NewEntry()
 	creationMinEntry.SetText(strconv.Itoa(l.creationMin))
 	creationMaxEntry := widget.NewEntry()
 	creationMaxEntry.SetText(strconv.Itoa(l.creationMax))
 
-	creationApply := widget.NewButton("Appliquer", func() {
+	creationApply := widget.NewButton(T().Filters, func() {
 		min, _ := strconv.Atoi(creationMinEntry.Text)
 		max, _ := strconv.Atoi(creationMaxEntry.Text)
 		if min > 0 && max > 0 && min <= max {
 			l.creationMin = min
 			l.creationMax = max
-			creationLabel.SetText(fmt.Sprintf("Date de création: %d - %d", min, max))
+			creationLabel.SetText(fmt.Sprintf(T().CreationYear+": %d - %d", min, max))
 			l.rebuildGrid()
 		}
 	})
@@ -179,31 +191,31 @@ func (l *ArtistList) createFilterPanel() (*fyne.Container, *fyne.Container, func
 	creationFilter := container.NewVBox(
 		creationLabel,
 		container.NewGridWithColumns(3,
-			widget.NewLabel("Min:"),
+			widget.NewLabel(T().Min+":"),
 			creationMinEntry,
 			widget.NewLabel(""),
 		),
 		container.NewGridWithColumns(3,
-			widget.NewLabel("Max:"),
+			widget.NewLabel(T().Max+":"),
 			creationMaxEntry,
 			creationApply,
 		),
 	)
 
-	// Filtre premier album
-	albumLabel := widget.NewLabel(fmt.Sprintf("Premier album: %d - %d", l.albumMin, l.albumMax))
+	// filtre sur l'année du premier album
+	albumLabel := widget.NewLabel(fmt.Sprintf(T().FirstAlbum+": %d - %d", l.albumMin, l.albumMax))
 	albumMinEntry := widget.NewEntry()
 	albumMinEntry.SetText(strconv.Itoa(l.albumMin))
 	albumMaxEntry := widget.NewEntry()
 	albumMaxEntry.SetText(strconv.Itoa(l.albumMax))
 
-	albumApply := widget.NewButton("Appliquer", func() {
+	albumApply := widget.NewButton(T().Filters, func() {
 		min, _ := strconv.Atoi(albumMinEntry.Text)
 		max, _ := strconv.Atoi(albumMaxEntry.Text)
 		if min > 0 && max > 0 && min <= max {
 			l.albumMin = min
 			l.albumMax = max
-			albumLabel.SetText(fmt.Sprintf("Premier album: %d - %d", min, max))
+			albumLabel.SetText(fmt.Sprintf(T().FirstAlbum+": %d - %d", min, max))
 			l.rebuildGrid()
 		}
 	})
@@ -211,24 +223,24 @@ func (l *ArtistList) createFilterPanel() (*fyne.Container, *fyne.Container, func
 	albumFilter := container.NewVBox(
 		albumLabel,
 		container.NewGridWithColumns(3,
-			widget.NewLabel("Min:"),
+			widget.NewLabel(T().Min+":"),
 			albumMinEntry,
 			widget.NewLabel(""),
 		),
 		container.NewGridWithColumns(3,
-			widget.NewLabel("Max:"),
+			widget.NewLabel(T().Max+":"),
 			albumMaxEntry,
 			albumApply,
 		),
 	)
 
-	// Filtre nombre de membres (checkboxes)
+	// filtre par nombre de membres
 	memberChecks := make([]*widget.Check, 0)
 	memberContainer := container.NewVBox()
 
 	for i := 1; i <= 8; i++ {
 		count := i
-		check := widget.NewCheck(fmt.Sprintf("%d membre(s)", count), func(checked bool) {
+		check := widget.NewCheck(fmt.Sprintf("%d "+T().Members, count), func(checked bool) {
 			l.memberCounts[count] = checked
 			l.rebuildGrid()
 		})
@@ -237,23 +249,23 @@ func (l *ArtistList) createFilterPanel() (*fyne.Container, *fyne.Container, func
 		memberContainer.Add(check)
 	}
 
-	// Filtre lieux (checkboxes avec recherche)
+	// filtre des lieux (checkbox + recherche)
 	locationSearch := widget.NewEntry()
-	locationSearch.SetPlaceHolder("Rechercher un lieu...")
+	locationSearch.SetPlaceHolder(T().Search + " " + T().Location + "...")
 
 	locationChecks := container.NewVBox()
 	updateLocationChecks := func(filter string) {
 		locationChecks.Objects = nil
 		filter = strings.ToLower(filter)
 
-		// Parcourir tous les lieux et créer les checkboxes
+		// parcourt les lieux et ajoute les cases
 		for _, loc := range l.allLocations {
 			if filter != "" && !strings.Contains(strings.ToLower(loc), filter) {
 				continue
 			}
 
 			locCopy := loc
-			// Vérifier l'état actuel dans selectedLocs
+			// on garde l'état déjà coché
 			isChecked := l.selectedLocs[locCopy]
 
 			check := widget.NewCheck(loc, func(checked bool) {
@@ -279,9 +291,9 @@ func (l *ArtistList) createFilterPanel() (*fyne.Container, *fyne.Container, func
 		locationScroll,
 	)
 
-	// Bouton réinitialiser
-	resetBtn := widget.NewButton("🔄 Réinitialiser tous les filtres", func() {
-		// Réinitialiser dates
+	// bouton pour tout réinitialiser
+	resetBtn := widget.NewButton("🔄 "+T().ResetFilters, func() {
+		// reset des dates
 		minC, maxC := getCreationYearRange(l.artists)
 		minA, maxA := getFirstAlbumYearRange(l.artists)
 		l.creationMin = minC
@@ -293,10 +305,10 @@ func (l *ArtistList) createFilterPanel() (*fyne.Container, *fyne.Container, func
 		creationMaxEntry.SetText(strconv.Itoa(maxC))
 		albumMinEntry.SetText(strconv.Itoa(minA))
 		albumMaxEntry.SetText(strconv.Itoa(maxA))
-		creationLabel.SetText(fmt.Sprintf("Date de création: %d - %d", minC, maxC))
-		albumLabel.SetText(fmt.Sprintf("Premier album: %d - %d", minA, maxA))
+		creationLabel.SetText(fmt.Sprintf(T().CreationYear+": %d - %d", minC, maxC))
+		albumLabel.SetText(fmt.Sprintf(T().FirstAlbum+": %d - %d", minA, maxA))
 
-		// Réinitialiser membres
+		// reset des membres
 		for i := 1; i <= 8; i++ {
 			l.memberCounts[i] = true
 		}
@@ -305,7 +317,7 @@ func (l *ArtistList) createFilterPanel() (*fyne.Container, *fyne.Container, func
 			check.Refresh()
 		}
 
-		// Réinitialiser lieux
+		// reset des lieux
 		for _, loc := range l.allLocations {
 			l.selectedLocs[loc] = true
 		}
@@ -316,12 +328,12 @@ func (l *ArtistList) createFilterPanel() (*fyne.Container, *fyne.Container, func
 	})
 	resetBtn.Importance = widget.HighImportance
 
-	// Accordion pour organiser les filtres
+	// accordion pour ranger les filtres
 	accordion := widget.NewAccordion(
-		widget.NewAccordionItem("Creation Date", creationFilter),
-		widget.NewAccordionItem("💿 Année premier album", albumFilter),
-		widget.NewAccordionItem("👥 Nombre de membres", memberContainer),
-		widget.NewAccordionItem("Locations", locationFilter),
+		widget.NewAccordionItem(T().CreationYear, creationFilter),
+		widget.NewAccordionItem("💿 "+T().FirstAlbum, albumFilter),
+		widget.NewAccordionItem("👥 "+T().Members, memberContainer),
+		widget.NewAccordionItem(T().Location, locationFilter),
 	)
 
 	return container.NewVBox(
@@ -330,7 +342,7 @@ func (l *ArtistList) createFilterPanel() (*fyne.Container, *fyne.Container, func
 	), locationChecks, updateLocationChecks
 }
 
-// rebuildGrid met à jour la grille selon les filtres
+// rebuild grille
 func (l *ArtistList) rebuildGrid() {
 	if l.grid == nil {
 		return
@@ -339,8 +351,8 @@ func (l *ArtistList) rebuildGrid() {
 	filteredList := l.filteredArtists()
 
 	if len(filteredList) == 0 {
-		// Message "aucun résultat"
-		msgText := widget.NewLabel("Aucun résultat trouvé")
+		// message quand rien ne correspond
+		msgText := widget.NewLabel(T().NoResults)
 		msgText.Alignment = fyne.TextAlignCenter
 		l.grid.Add(msgText)
 	} else {
@@ -352,22 +364,22 @@ func (l *ArtistList) rebuildGrid() {
 	l.grid.Refresh()
 }
 
-// filteredArtists retourne les artistes filtrés
+// artistes filtrés
 func (l *ArtistList) filteredArtists() []models.Artist {
 	res := make([]models.Artist, 0, len(l.artists))
 	st := l.searchText
-	seen := make(map[int]bool) // Éviter les doublons
+	seen := make(map[int]bool) // évite les doublons
 
 	for _, a := range l.artists {
-		// Vérifier si cet artiste a déjà été ajouté
+		// évite d'ajouter deux fois le même
 		if seen[a.ID] {
 			continue
 		}
 
-		// Filtre de recherche textuelle
+		// filtre sur le texte recherché
 		matchesSearch := st == "" || strings.Contains(strings.ToLower(a.Name), st)
 		if !matchesSearch {
-			// Chercher dans les membres
+			// on cherche aussi dans les membres
 			for _, m := range a.Members {
 				if strings.Contains(strings.ToLower(m), st) {
 					matchesSearch = true
@@ -379,27 +391,27 @@ func (l *ArtistList) filteredArtists() []models.Artist {
 			continue
 		}
 
-		// Filtre date de création
+		// filtre sur l'année de création
 		if a.CreationDate < l.creationMin || a.CreationDate > l.creationMax {
 			continue
 		}
 
-		// Filtre année premier album
+		// filtre sur l'année du premier album
 		albumYear := extractAlbumYear(a.FirstAlbum)
 		if albumYear > 0 && (albumYear < l.albumMin || albumYear > l.albumMax) {
 			continue
 		}
 
-		// Filtre nombre de membres
+		// filtre sur le nombre de membres
 		memberCount := len(a.Members)
 		if !l.memberCounts[memberCount] {
 			continue
 		}
 
-		// Filtre lieux
+		// filtre sur les lieux
 		matchesLocation := false
 		if len(a.LocationsList) == 0 {
-			matchesLocation = true // Pas de lieux = on affiche
+			matchesLocation = true // pas de lieu -> on affiche
 		} else {
 			for _, loc := range a.LocationsList {
 				normalized := normalizeLocation(loc)
@@ -419,7 +431,7 @@ func (l *ArtistList) filteredArtists() []models.Artist {
 	return res
 }
 
-// Fonctions utilitaires pour les filtres
+// utils filtres
 func getCreationYearRange(artists []models.Artist) (int, int) {
 	if len(artists) == 0 {
 		return 1950, 2024
@@ -459,7 +471,7 @@ func getFirstAlbumYearRange(artists []models.Artist) (int, int) {
 }
 
 func extractAlbumYear(dateStr string) int {
-	// Format attendu: "DD-MM-YYYY"
+	// format attendu "DD-MM-YYYY"
 	parts := strings.Split(dateStr, "-")
 	if len(parts) == 3 {
 		year, err := strconv.Atoi(parts[2])
@@ -487,7 +499,7 @@ func extractAllLocations(artists []models.Artist) []string {
 }
 
 func normalizeLocation(loc string) string {
-	// Convertir "city-state-country" en "City, State, Country"
+	// convertit "city-state-country" en "City, State, Country"
 	parts := strings.Split(loc, "-")
 	normalized := make([]string, len(parts))
 	for i, p := range parts {
@@ -500,38 +512,38 @@ func normalizeLocation(loc string) string {
 }
 
 func createArtistCard(artist models.Artist, onSelect func(models.Artist)) *fyne.Container {
-	// Image de l'artiste
+	// image de l'artiste
 	uri, _ := storage.ParseURI(artist.Image)
 	img := canvas.NewImageFromURI(uri)
 	img.FillMode = canvas.ImageFillContain
 	img.SetMinSize(fyne.NewSize(200, 200))
 
-	// Nom de l'artiste en noir et centré sous l'image
-	nameText := canvas.NewText(artist.Name, color.Black)
+	// nom centré sous l'image (color choisi selon contraste)
+	captionBg := canvas.NewRectangle(CardBgLight)
+	nameText := canvas.NewText(artist.Name, ContrastColor(CardBgLight))
 	nameText.TextStyle = fyne.TextStyle{Bold: true}
 	nameText.Alignment = fyne.TextAlignCenter
 
-	// Afficher le nom juste sous l'image avec un fond discret
-	captionBg := canvas.NewRectangle(color.RGBA{R: 235, G: 235, B: 235, A: 255})
+	// petit fond sous le nom
 	caption := container.NewMax(
 		captionBg,
 		container.NewPadded(container.NewCenter(nameText)),
 	)
 
-	// Informations
-	members := widget.NewLabel(fmt.Sprintf("%d membres", len(artist.Members)))
+	// infos rapides (texte rendu selon contraste du fond de la carte)
+	members := canvas.NewText(fmt.Sprintf("%d "+T().Members, len(artist.Members)), ContrastColor(CardBg))
 	members.Alignment = fyne.TextAlignCenter
 
-	created := widget.NewLabel(fmt.Sprintf("Créé en %d", artist.CreationDate))
+	created := canvas.NewText(fmt.Sprintf(T().Created, artist.CreationDate), ContrastColor(CardBg))
 	created.Alignment = fyne.TextAlignCenter
 
-	// Bouton pour voir les détails
-	btn := widget.NewButton("Voir les détails", func() {
+	// bouton pour ouvrir la fiche
+	btn := widget.NewButton(T().ShowDetails, func() {
 		onSelect(artist)
 	})
 	btn.Importance = widget.HighImportance
 
-	// Card container
+	// container de la carte
 	card := container.NewVBox(
 		img,
 		caption,
@@ -540,8 +552,8 @@ func createArtistCard(artist models.Artist, onSelect func(models.Artist)) *fyne.
 		container.NewCenter(btn),
 	)
 
-	// Fond avec bordure
-	bg := canvas.NewRectangle(color.RGBA{R: 240, G: 240, B: 240, A: 255})
+	// fond avec bordure (utilise couleurs sombres pour lisibilité)
+	bg := canvas.NewRectangle(CardBg)
 
 	return container.New(
 		layout.NewMaxLayout(),

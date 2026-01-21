@@ -15,13 +15,13 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-// ArtistPage affiche les détails d'un artiste avec design moderne
+// page détails artiste
 func NewArtistPage(artist models.Artist, onBack func()) fyne.CanvasObject {
-	// === BOUTON RETOUR ===
-	backBtn := widget.NewButton("← Back", onBack)
+	// bouton retour
+	backBtn := widget.NewButton(T().Back, onBack)
 	backBtn.Importance = widget.MediumImportance
 
-	// === HEADER ===
+	// header
 	headerBg := canvas.NewRectangle(BgDarker)
 	header := container.NewMax(
 		headerBg,
@@ -33,37 +33,37 @@ func NewArtistPage(artist models.Artist, onBack func()) fyne.CanvasObject {
 	)
 	header.Resize(fyne.NewSize(0, 80))
 
-	// === CONTENU PRINCIPAL ===
-	// Image de l'artiste
+	// contenu
+	// image
 	uri, _ := storage.ParseURI(artist.Image)
 	img := canvas.NewImageFromURI(uri)
 	img.FillMode = canvas.ImageFillContain
 	img.SetMinSize(fyne.NewSize(350, 350))
 
-	// Titre
+	// titre
 	titleText := canvas.NewText(artist.Name, TextWhite)
 	titleText.TextStyle = fyne.TextStyle{Bold: true}
 	titleText.TextSize = 32
 	titleText.Alignment = fyne.TextAlignCenter
 
 	// Badge année création
-	yearBadge := canvas.NewText(fmt.Sprintf("Created %d", artist.CreationDate), AccentCyan)
+	yearBadge := canvas.NewText(fmt.Sprintf(T().Created, artist.CreationDate), AccentCyan)
 	yearBadge.TextSize = 14
 	yearBadge.Alignment = fyne.TextAlignCenter
 
-	// Premier album
-	albumText := canvas.NewText(fmt.Sprintf("💿 Premier album: %s", artist.FirstAlbum), TextLight)
+	// album
+	albumText := canvas.NewText(fmt.Sprintf(T().FirstAlbumLabel, artist.FirstAlbum), TextLight)
 	albumText.TextSize = 12
 	albumText.Alignment = fyne.TextAlignCenter
 
-	// Section membres
-	membersLabel := canvas.NewText("👥 Membres du groupe", TextWhite)
+	// membres
+	membersLabel := canvas.NewText(T().GroupMembers, ContrastColor(CardBg))
 	membersLabel.TextStyle = fyne.TextStyle{Bold: true}
 	membersLabel.TextSize = 16
 
 	membersList := container.NewVBox()
 	for _, member := range artist.Members {
-		memberItem := canvas.NewText(member, TextLight)
+		memberItem := canvas.NewText(member, ContrastColor(CardBg))
 		memberItem.TextSize = 13
 		membersList.Add(container.NewPadded(memberItem))
 	}
@@ -79,7 +79,7 @@ func NewArtistPage(artist models.Artist, onBack func()) fyne.CanvasObject {
 		),
 	)
 
-	// === CONTENU SCROLLABLE ===
+	// contenu scrollable
 	mainContent := container.NewVBox(
 		widget.NewLabel(""), // Spacer
 		container.NewCenter(img),
@@ -91,7 +91,7 @@ func NewArtistPage(artist models.Artist, onBack func()) fyne.CanvasObject {
 		widget.NewLabel(""), // Spacer
 	)
 
-	// Charger les concerts
+	// on charge les concerts
 	concertContent := loadConcertContent(artist.ID)
 	if concertContent != nil {
 		mainContent.Add(concertContent)
@@ -101,7 +101,7 @@ func NewArtistPage(artist models.Artist, onBack func()) fyne.CanvasObject {
 
 	scroll := container.NewScroll(mainContent)
 
-	// === LAYOUT FINAL avec BorderLayout ===
+	// mise en page finale avec border layout
 	return container.New(
 		layout.NewBorderLayout(header, nil, nil, nil),
 		header,
@@ -109,16 +109,16 @@ func NewArtistPage(artist models.Artist, onBack func()) fyne.CanvasObject {
 	)
 }
 
-// loadConcertContent charge et retourne le contenu des concerts
+// load concerts
 func loadConcertContent(artistID int) fyne.CanvasObject {
 	relations, err := models.FetchRelations()
 	if err != nil {
-		errorLabel := canvas.NewText("Error loading concerts", TextLight)
+		errorLabel := canvas.NewText(fmt.Sprintf(T().Error+": %v", err), ContrastColor(CardBg))
 		errorLabel.TextSize = 12
 		return errorLabel
 	}
 
-	// Trouver les relations pour cet artiste
+	// on cherche les relations pour cet artiste
 	var datesLocations map[string][]string
 	for _, rel := range relations.Index {
 		if rel.ID == artistID {
@@ -128,20 +128,20 @@ func loadConcertContent(artistID int) fyne.CanvasObject {
 	}
 
 	if datesLocations == nil || len(datesLocations) == 0 {
-		noDataLabel := canvas.NewText("Aucun concert programmé pour le moment", TextLight)
+		noDataLabel := canvas.NewText(T().NoConcerts, ContrastColor(CardBg))
 		noDataLabel.TextSize = 12
 		return noDataLabel
 	}
 
-	// Trier les lieux
+	// on trie les lieux
 	locations := make([]string, 0, len(datesLocations))
 	for location := range datesLocations {
 		locations = append(locations, location)
 	}
 	sort.Strings(locations)
 
-	// Sections concerts
-	headerLabel := canvas.NewText(fmt.Sprintf("%d Locations", len(locations)), TextWhite)
+	// header de la section concerts
+	headerLabel := canvas.NewText(fmt.Sprintf("%d "+T().Location, len(locations)), ContrastColor(CardBg))
 	headerLabel.TextStyle = fyne.TextStyle{Bold: true}
 	headerLabel.TextSize = 16
 
@@ -159,30 +159,30 @@ func loadConcertContent(artistID int) fyne.CanvasObject {
 	return container.NewPadded(locationsList)
 }
 
-// createLocationItem crée une carte pour un lieu et ses dates
+// carte lieu+dates
 func createLocationItem(location string, dates []string) *fyne.Container {
-	// Formater le lieu
+	// on reformate le nom du lieu
 	formattedLoc := formatLocation(location)
 
-	// Titre du lieu avec drapeau
+	// titre du lieu + drapeau
 	countryFlag := getCountryFlag(formattedLoc)
-	locationTitle := canvas.NewText(countryFlag+" "+formattedLoc, TextWhite)
+	locationTitle := canvas.NewText(countryFlag+" "+formattedLoc, ContrastColor(CardBgLight))
 	locationTitle.TextStyle = fyne.TextStyle{Bold: true}
 	locationTitle.TextSize = 14
 
-	// Dates
+	// liste des dates
 	datesList := container.NewVBox(
-		canvas.NewText("Dates de concert:", TextLight),
+		canvas.NewText(T().DatesLabel, ContrastColor(CardBgLight)),
 	)
 	for _, date := range dates {
-		dateItem := canvas.NewText("🎫 "+date, TextWhite)
+		dateItem := canvas.NewText("🎫 "+date, ContrastColor(CardBgLight))
 		dateItem.TextSize = 16
 		dateItem.TextStyle = fyne.TextStyle{Bold: true}
 		datesList.Add(container.NewPadded(dateItem))
 	}
 
-	// Bouton Google Maps
-	mapBtn := widget.NewButton("Voir sur Maps", func() {
+	// bouton vers google maps
+	mapBtn := widget.NewButton(T().ViewOnMaps, func() {
 		mapURL := fmt.Sprintf("https://www.google.com/maps/search/%s", url.QueryEscape(formatLocationForMap(location)))
 		if parsedURL, err := url.Parse(mapURL); err == nil {
 			fyne.CurrentApp().OpenURL(parsedURL)
@@ -190,7 +190,7 @@ func createLocationItem(location string, dates []string) *fyne.Container {
 	})
 	mapBtn.Importance = widget.LowImportance
 
-	// Card avec fond sombre
+	// carte sombre pour chaque lieu
 	cardContent := container.NewVBox(
 		locationTitle,
 		widget.NewLabel(""),
@@ -211,7 +211,7 @@ func createLocationItem(location string, dates []string) *fyne.Container {
 	)
 }
 
-// formatLocation formate un lieu pour l'affichage
+// format lieu
 func formatLocation(location string) string {
 	location = strings.ReplaceAll(location, "_", " ")
 	location = strings.ReplaceAll(location, "-", ", ")
@@ -226,14 +226,14 @@ func formatLocation(location string) string {
 	return strings.Join(words, " ")
 }
 
-// formatLocationForMap formate un lieu pour Google Maps
+// format pour maps
 func formatLocationForMap(location string) string {
 	location = strings.ReplaceAll(location, "_", " ")
 	location = strings.ReplaceAll(location, "-", ",")
 	return location
 }
 
-// getCountryFlag retourne l'emoji du drapeau du pays
+// emoji drapeau
 func getCountryFlag(location string) string {
 	location = strings.ToLower(strings.TrimSpace(location))
 

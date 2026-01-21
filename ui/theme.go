@@ -7,7 +7,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 )
 
-// CustomTheme définit le thème personnalisé de l'application
+// custom theme
 type CustomTheme struct{}
 
 var _ fyne.Theme = (*CustomTheme)(nil)
@@ -15,7 +15,7 @@ var _ fyne.Theme = (*CustomTheme)(nil)
 func (m CustomTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
 	switch name {
 	case theme.ColorNameBackground:
-		return BgDark // Fond principal sombre
+		return BgDark // fond sombre
 	case theme.ColorNameButton:
 		return AccentCyan
 	case theme.ColorNameDisabledButton:

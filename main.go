@@ -1,19 +1,23 @@
 package main
 
 import (
+	"fmt"
 	"groupie-tracker/models"
 	"groupie-tracker/ui"
 	"log"
 
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/widget"
 )
 
 func main() {
 	log.Println("[START] Loading Groupie Tracker...")
 
-	// Créer l'application Fyne
-	myApp := app.New()
+	// Créer l'application Fyne avec un ID stable pour les préférences
+	myApp := app.NewWithID("groupie-tracker")
 	log.Println("[OK] Fyne app created")
 
 	// Appliquer le thème personnalisé
@@ -33,25 +37,46 @@ func main() {
 
 func showArtistList(win *ui.Window) {
 	// Afficher le chargement
-	win.ShowLoading("Chargement des artistes...")
+	win.ShowLoading(ui.T().Loading)
 
 	// Récupérer les artistes de l'API
 	go func() {
 		artists, err := models.FetchArtists()
 		if err != nil {
 			log.Println("Erreur:", err)
-			dialog.ShowError(err, win.Window)
+			// update UI on main thread with error + retry
+			fyne.CurrentApp().SendNotification(&fyne.Notification{
+				Title:   ui.T().Error,
+				Content: err.Error(),
+			})
+			fyne.Do(func() {
+				dialog.ShowError(err, win.Window)
+				retryBtn := widget.NewButton("🔁 Retry", func() {
+					showArtistList(win)
+				})
+				retryBtn.Importance = widget.HighImportance
+				msg := widget.NewLabel(fmt.Sprintf("%s: %v", ui.T().Error, err))
+				content := container.NewCenter(container.NewVBox(msg, retryBtn))
+				win.SetContent(content)
+			})
 			return
 		}
 
 		// Créer et afficher la liste
-		list := ui.NewArtistList(artists, func(artist models.Artist) {
+		list := ui.NewArtistListWithWindow(win, artists, func(artist models.Artist) {
 			showArtistDetail(win, artist)
 		}, func() {
 			showMap(win, artists)
 		})
 
-		win.SetContent(list)
+		// Connecter le callback de refresh pour le bouton langue
+		win.OnRefresh = func() {
+			showArtistList(win)
+		}
+
+		fyne.Do(func() {
+			win.SetContent(list)
+		})
 	}()
 }
 
@@ -67,7 +92,7 @@ func showArtistDetail(win *ui.Window, artist models.Artist) {
 
 func showMap(win *ui.Window, artists []models.Artist) {
 	// Afficher le chargement
-	win.ShowLoading("Chargement de la carte des concerts...")
+	win.ShowLoading(ui.T().Loading)
 
 	// Créer et afficher la page de carte en passant la window
 	ui.NewMapPageWithWindow(win, artists, func() {
