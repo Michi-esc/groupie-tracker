@@ -197,26 +197,6 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 		mapCanvas = createMapCanvasFromAPI(concertLocations, concertsByLocation)
 		log.Println("Map canvas created successfully")
 
-		// on prépare la liste des lieux
-		fyne.Do(func() {
-			loadingLabel.SetText("Loading locations list...")
-		})
-		time.Sleep(300 * time.Millisecond)
-
-		log.Println("Creating locations list...")
-		// on génère la liste des lieux
-		var locationsList fyne.CanvasObject
-		defer func() {
-			if r := recover(); r != nil {
-				log.Printf("Erreur dans createLocationsList: %v\n", r)
-				locationsList = canvas.NewText("Erreur lors de la création de la liste", ContrastColor(BgDarker))
-			}
-		}()
-		locationsList = createLocationsListFromAPI(concertLocations, concertsByLocation)
-		log.Println("Locations list created successfully")
-		scrollLocations := container.NewScroll(locationsList)
-		scrollLocations.SetMinSize(fyne.NewSize(600, 600))
-
 		// petit résumé du nombre de lieux
 		infoLabel := widget.NewLabel(fmt.Sprintf("%d "+T().Location, len(concertLocations)))
 		infoLabel.Alignment = fyne.TextAlignCenter
@@ -227,14 +207,11 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 		title.TextStyle = fyne.TextStyle{Bold: true}
 		title.Alignment = fyne.TextAlignCenter
 
-		// carte + liste côte à côte
-		contentDisplay := container.NewHSplit(mapCanvas, scrollLocations)
-
 		// border final
 		finalContent := container.NewBorder(
 			container.NewVBox(backButton, title, infoLabel),
 			nil, nil, nil,
-			contentDisplay,
+			mapCanvas,
 		)
 
 		// Mettre à jour le contenu de la window depuis le thread UI
@@ -464,8 +441,8 @@ func createMapCanvasFromAPI(locations []*models.LocationCoords, concertsByLocati
 	lonRange = maxLon - minLon
 
 	// target canvas display size
-	mapWidth := float32(1000)
-	mapHeight := float32(600)
+	mapWidth := float32(1600)
+	mapHeight := float32(900)
 
 	// choose zoom to roughly fit bounding box into mapWidth/mapHeight
 	// test zooms from 1..6 and pick the one where tile pixel span is >= map size
@@ -558,11 +535,6 @@ func createMapCanvasFromAPI(locations []*models.LocationCoords, concertsByLocati
 	// container for tiles and overlays
 	mapContainer := container.New(layout.NewMaxLayout())
 
-	// background
-	mapBg := canvas.NewRectangle(BgDarker)
-	mapBg.SetMinSize(fyne.NewSize(mapWidth, mapHeight))
-	mapContainer.Add(mapBg)
-
 	// a dedicated container for absolute placement
 	tileContainer := container.NewWithoutLayout()
 
@@ -607,25 +579,30 @@ func createMapCanvasFromAPI(locations []*models.LocationCoords, concertsByLocati
 		tooltipContent := container.NewVBox()
 
 		// Location name
-		locationLabel := widget.NewLabel(locationName)
-		locationLabel.TextStyle = fyne.TextStyle{Bold: true}
-		tooltipContent.Add(locationLabel)
+		locationText := canvas.NewText(locationName, color.Black)
+		locationText.TextSize = 12
+		locationText.TextStyle = fyne.TextStyle{Bold: true}
+		tooltipContent.Add(locationText)
 		tooltipContent.Add(widget.NewSeparator())
 
 		// Get concerts for this location
 		if concerts, ok := concertsByLocation[loc.Lieux]; ok {
 			for _, concert := range concerts {
-				artistLabel := widget.NewLabel(concert.Artist)
-				artistLabel.TextStyle = fyne.TextStyle{Bold: true}
-				tooltipContent.Add(artistLabel)
+				artistText := canvas.NewText(concert.Artist, color.Black)
+				artistText.TextSize = 11
+				artistText.TextStyle = fyne.TextStyle{Bold: true}
+				tooltipContent.Add(artistText)
 
 				for _, date := range concert.Dates {
-					dateLabel := widget.NewLabel(date)
-					tooltipContent.Add(dateLabel)
+					dateText := canvas.NewText(date, color.Black)
+					dateText.TextSize = 10
+					tooltipContent.Add(dateText)
 				}
 			}
 		} else {
-			tooltipContent.Add(widget.NewLabel("(Pas de concerts)"))
+			noConcertText := canvas.NewText("(Pas de concerts)", color.Black)
+			noConcertText.TextSize = 10
+			tooltipContent.Add(noConcertText)
 		}
 
 		// Create tooltip box with white background
@@ -664,7 +641,6 @@ func createMapCanvasFromAPI(locations []*models.LocationCoords, concertsByLocati
 	mapContainer.Add(tooltipContainer)
 
 	scroll := container.NewScroll(mapContainer)
-	scroll.SetMinSize(fyne.NewSize(mapWidth, mapHeight))
 
 	// Now fetch tiles in background and update placeholders when ready
 	go func() {
