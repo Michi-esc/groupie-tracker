@@ -46,12 +46,10 @@ type GeocodingResponse struct {
 
 // page carte
 func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
-	loadingLabel := widget.NewLabel("Loading map...")
 	// Créer une barre de chargement simple
 	loadingLabel := widget.NewLabel(T().Loading)
 	loadingBar := widget.NewProgressBarInfinite()
 
-	backButton := widget.NewButton("← Back", onBack)
 	// Créer le bouton retour
 	backButton := widget.NewButton(T().Back, onBack)
 	backButton.Importance = widget.HighImportance
@@ -89,9 +87,6 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 		log.Printf("✓ Locations loaded: %d location entries\n", len(locations.Index))
 
 		fyne.Do(func() {
-			loadingLabel.SetText("Geocoding locations...")
-		})
-
 			loadingLabel.SetText(T().Loading)
 		})
 
@@ -158,64 +153,6 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 			}
 		}
 
-		totalLocations := len(uniqueLocations)
-		fyne.Do(func() {
-			loadingLabel.SetText(fmt.Sprintf("Geocoding: 0/%d", totalLocations))
-		})
-
-		numWorkers := 16
-		locationChan := make(chan string, len(uniqueLocations))
-		resultChan := make(chan *LocationCoords, len(uniqueLocations))
-		var wg sync.WaitGroup
-
-		for i := 0; i < numWorkers; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				for location := range locationChan {
-					coords := geocodeLocationFast(location)
-					if coords != nil {
-						coords.Concerts = concertsByLocation[location]
-						resultChan <- coords
-					}
-				}
-			}()
-		}
-
-		go func() {
-			for location := range uniqueLocations {
-				locationChan <- location
-			}
-			close(locationChan)
-		}()
-
-		successCount := 0
-		var locations []*LocationCoords
-		var locMutex sync.Mutex
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for coords := range resultChan {
-				if coords != nil {
-					locMutex.Lock()
-					locations = append(locations, coords)
-					successCount++
-					locMutex.Unlock()
-
-					fyne.Do(func() {
-						loadingLabel.SetText(fmt.Sprintf("Geocoding: %d/%d", successCount, totalLocations))
-					})
-				}
-			}
-		}()
-
-		wg.Wait()
-		close(resultChan)
-
-		time.Sleep(200 * time.Millisecond)
-
-		if len(locations) == 0 {
 		log.Printf("✓ Matched %d artist-location pairs\n", matchedCount)
 
 		// on garde les lieux uniques
@@ -246,16 +183,18 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 			loadingLabel.SetText(fmt.Sprintf("Rendering %d locations...", len(concertLocations)))
 		})
 
+		log.Println("Creating map canvas...")
 		// création de la carte canvas
 		var mapCanvas fyne.CanvasObject
 		defer func() {
 			if r := recover(); r != nil {
-				log.Println("Erreur dans createMapCanvas:", r)
-				mapCanvas = canvas.NewText("Erreur lors de la création de la carte", TextLight)
+				log.Printf("Erreur dans createMapCanvas: %v\n", r)
+				mapCanvas = canvas.NewText("Erreur lors de la création de la carte", ContrastColor(BgDarker))
 			}
 		}()
 
 		mapCanvas = createMapCanvasFromAPI(concertLocations)
+		log.Println("Map canvas created successfully")
 
 		// on prépare la liste des lieux
 		fyne.Do(func() {
@@ -263,31 +202,30 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 		})
 		time.Sleep(300 * time.Millisecond)
 
+		log.Println("Creating locations list...")
 		// on génère la liste des lieux
 		var locationsList fyne.CanvasObject
 		defer func() {
 			if r := recover(); r != nil {
-				log.Println("Erreur dans createLocationsList:", r)
-				locationsList = canvas.NewText("Erreur lors de la création de la liste", TextLight)
+				log.Printf("Erreur dans createLocationsList: %v\n", r)
+				locationsList = canvas.NewText("Erreur lors de la création de la liste", ContrastColor(BgDarker))
 			}
 		}()
 		locationsList = createLocationsListFromAPI(concertLocations, concertsByLocation)
+		log.Println("Locations list created successfully")
 		scrollLocations := container.NewScroll(locationsList)
 		scrollLocations.SetMinSize(fyne.NewSize(600, 600))
 
-		infoLabel := widget.NewLabel(fmt.Sprintf("%d locations found", len(locations)))
 		// petit résumé du nombre de lieux
 		infoLabel := widget.NewLabel(fmt.Sprintf("%d "+T().Location, len(concertLocations)))
 		infoLabel.Alignment = fyne.TextAlignCenter
 		infoLabel.TextStyle = fyne.TextStyle{Bold: true}
 
-		title := widget.NewLabel("Concerts Map")
 		// titre de la page
 		title := widget.NewLabel(T().ConcertLocations)
 		title.TextStyle = fyne.TextStyle{Bold: true}
 		title.Alignment = fyne.TextAlignCenter
 
-		contentDisplay := container.NewHSplit(scrollMap, scrollLocations)
 		// carte + liste côte à côte
 		contentDisplay := container.NewHSplit(mapCanvas, scrollLocations)
 
@@ -298,7 +236,6 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 			contentDisplay,
 		)
 
-		log.Println("Affichage de la carte avec", len(locations), "lieux")
 		// Mettre à jour le contenu de la window depuis le thread UI
 		log.Println("Affichage de la carte avec", len(concertLocations), "lieux")
 		fyne.Do(func() {
@@ -307,10 +244,6 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 	}()
 }
 
-func geocodeLocationFast(location string) *LocationCoords {
-	cacheMutex.Lock()
-	if cached, exists := geocodeCache[location]; exists {
-		cacheMutex.Unlock()
 // compat
 func geocodeLocationFast(location string) *models.LocationCoords {
 	// Use Nominatim API to geocode location names
@@ -320,88 +253,10 @@ func geocodeLocationFast(location string) *models.LocationCoords {
 	if cached := models.GetCachedCoords(location); cached != nil {
 		return cached
 	}
-	cacheMutex.Unlock()
-
-	cleanLocation := strings.ReplaceAll(location, "_", " ")
-	cleanLocation = strings.ReplaceAll(cleanLocation, "-", ", ")
 
 	// Apply location mappings for problematic/outdated location names
 	normalizedLocation := normalizeLocation(location)
 
-	fallbackCoords := getApproxCoordinates(cleanLocation)
-	if fallbackCoords != nil {
-		cacheMutex.Lock()
-		geocodeCache[location] = fallbackCoords
-		cacheMutex.Unlock()
-		return fallbackCoords
-	}
-
-	apis := []struct {
-		name   string
-		urlFmt string
-	}{
-		{
-			"osm",
-			"https://nominatim.openstreetmap.org/search?format=json&q=%s&limit=1&accept-language=en",
-		},
-		{
-			"locationiq",
-			"https://us1.locationiq.com/v1/search?key=pk.0b2779c3718c5e80c5d6fa03e25a4ee0&format=json&q=%s&limit=1",
-		},
-	}
-
-	resultChan := make(chan *LocationCoords, len(apis))
-	for _, api := range apis {
-		go func(a struct {
-			name   string
-			urlFmt string
-		}) {
-			result := tryGeocodeAPI(cleanLocation, a.urlFmt, a.name)
-			if result != nil {
-				resultChan <- result
-			}
-		}(api)
-	}
-
-	select {
-	case result := <-resultChan:
-		if result != nil {
-			cacheMutex.Lock()
-			geocodeCache[location] = result
-			cacheMutex.Unlock()
-			return result
-		}
-	case <-time.After(3 * time.Second):
-	}
-
-	coords := getApproxCoordinates(cleanLocation)
-	if coords != nil {
-		cacheMutex.Lock()
-		geocodeCache[location] = coords
-		cacheMutex.Unlock()
-		return coords
-	}
-
-	defaultCoords := &LocationCoords{
-		Lat:      20.0,
-		Lon:      0.0,
-		Location: location,
-	}
-	cacheMutex.Lock()
-	geocodeCache[location] = defaultCoords
-	cacheMutex.Unlock()
-	return defaultCoords
-}
-
-func tryGeocodeAPI(cleanLocation, urlFmt, apiName string) *LocationCoords {
-	url := fmt.Sprintf(urlFmt, strings.ReplaceAll(cleanLocation, " ", "+"))
-
-	client := &http.Client{
-		Timeout: 2 * time.Second,
-	}
-
-	resp, err := client.Get(url)
-	if err != nil {
 	// replace underscore with space for better geocoding
 	query := strings.ReplaceAll(normalizedLocation, "_", " ")
 
@@ -471,10 +326,16 @@ func tryGeocodeAPI(cleanLocation, urlFmt, apiName string) *LocationCoords {
 		Longitude: lon,
 	}
 
-	return result
+	// Cache the result
+	models.CacheCoords(location, coords)
+
+	// respecter le rate limit de Nominatim (1 req/sec minimum)
+	time.Sleep(800 * time.Millisecond)
+
+	return coords
 }
 
-func getApproxCoordinates(location string) *LocationCoords {
+func getApproxCoordinates(location string) *models.LocationCoords {
 	location = strings.ToLower(strings.TrimSpace(location))
 
 	parts := strings.Split(location, ",")
@@ -521,13 +382,17 @@ func getApproxCoordinates(location string) *LocationCoords {
 		"south africa":   {-30.5595, 22.9375},
 		"israel":         {31.0461, 34.8516},
 		"turkey":         {38.9637, 35.2433},
-	// Cache the result
-	models.CacheCoords(location, coords)
+	}
 
-	// respecter le rate limit de Nominatim (1 req/sec minimum)
-	time.Sleep(800 * time.Millisecond)
+	if coords, ok := countryCoords[location]; ok {
+		return &models.LocationCoords{
+			Lieux:     location,
+			Latitude:  coords[0],
+			Longitude: coords[1],
+		}
+	}
 
-	return coords
+	return nil
 }
 
 // normalizeLocation maps outdated or problematic location names to current valid ones
@@ -538,18 +403,6 @@ func normalizeLocation(location string) string {
 		"netherlands_antilles":            "curacao",
 	}
 
-	if coords, ok := countryCoords[location]; ok {
-		return &LocationCoords{
-			Lat:      coords[0],
-			Lon:      coords[1],
-			Location: location,
-		}
-	}
-
-	return nil
-}
-
-func createMapCanvas(locations []*LocationCoords) fyne.CanvasObject {
 	if normalized, exists := locationMap[strings.ToLower(location)]; exists {
 		log.Printf("[LOCATION NORMALIZED] %s -> %s\n", location, normalized)
 		return normalized
@@ -559,19 +412,16 @@ func createMapCanvas(locations []*LocationCoords) fyne.CanvasObject {
 
 // dessine carte
 func createMapCanvasFromAPI(locations []*models.LocationCoords) fyne.CanvasObject {
+	log.Printf("createMapCanvasFromAPI called with %d locations\n", len(locations))
 	if len(locations) == 0 {
 		return canvas.NewText(T().NoLocations, ContrastColor(BgDarker))
 	}
-
-	minLat := locations[0].Lat
-	maxLat := locations[0].Lat
-	minLon := locations[0].Lon
-	maxLon := locations[0].Lon
 
 	// Implementation using OpenStreetMap tiles (slippy map)
 	// tile size is 256x256
 	const tileSize = 256
 
+	log.Println("Determining bounding box...")
 	// determine bounding box
 	minLat := locations[0].Latitude
 	maxLat := locations[0].Latitude
@@ -598,11 +448,9 @@ func createMapCanvasFromAPI(locations []*models.LocationCoords) fyne.CanvasObjec
 
 	if latRange < 0.1 {
 		latRange = 0.1
-	if latRange < 0.01 {
-		latRange = 0.01
 	}
-	if lonRange < 0.01 {
-		lonRange = 0.01
+	if lonRange < 0.1 {
+		lonRange = 0.1
 	}
 	padLat := latRange * 0.1
 	padLon := lonRange * 0.1
@@ -619,10 +467,10 @@ func createMapCanvasFromAPI(locations []*models.LocationCoords) fyne.CanvasObjec
 	mapHeight := float32(600)
 
 	// choose zoom to roughly fit bounding box into mapWidth/mapHeight
-	// test zooms from 1..12 and pick the one where tile pixel span is >= map size
-	// (12 is reasonable; 18 would load 1000+ tiles and timeout)
+	// test zooms from 1..6 and pick the one where tile pixel span is >= map size
+	// (6 is reasonable for worldwide view; 12+ would load millions of tiles)
 	chooseZoom := func() int {
-		for z := 12; z >= 1; z-- {
+		for z := 3; z >= 1; z-- {
 			tx1, ty1 := latLonToTileXY(maxLat, minLon, z)
 			tx2, ty2 := latLonToTileXY(minLat, maxLon, z)
 			dx := math.Abs(tx2-tx1) * float64(tileSize)
@@ -635,17 +483,73 @@ func createMapCanvasFromAPI(locations []*models.LocationCoords) fyne.CanvasObjec
 	}
 
 	zoom := chooseZoom()
+	maxTiles := 16 // cap très bas pour voir le monde entier
+	log.Printf("Chosen zoom level: %d\n", zoom)
 
 	// compute tile ranges
-	tx1, ty1 := latLonToTileXY(maxLat, minLon, zoom)
-	tx2, ty2 := latLonToTileXY(minLat, maxLon, zoom)
-	xMin := int(math.Floor(math.Min(tx1, tx2)))
-	xMax := int(math.Ceil(math.Max(tx1, tx2)))
-	yMin := int(math.Floor(math.Min(ty1, ty2)))
-	yMax := int(math.Ceil(math.Max(ty1, ty2)))
+	recompute := func(z int) (int, int, int, int, int, int) {
+		tx1, ty1 := latLonToTileXY(maxLat, minLon, z)
+		tx2, ty2 := latLonToTileXY(minLat, maxLon, z)
+		xMin := int(math.Floor(math.Min(tx1, tx2)))
+		xMax := int(math.Ceil(math.Max(tx1, tx2)))
+		yMin := int(math.Floor(math.Min(ty1, ty2)))
+		yMax := int(math.Ceil(math.Max(ty1, ty2)))
+		return xMin, xMax, yMin, yMax, xMax - xMin + 1, yMax - yMin + 1
+	}
 
-	tilesX := xMax - xMin + 1
-	tilesY := yMax - yMin + 1
+	xMin, xMax, yMin, yMax, tilesX, tilesY := recompute(zoom)
+	totalTiles := tilesX * tilesY
+
+	// Clamp tile coordinates to valid range for the zoom level
+	// At zoom N, tiles go from 0 to 2^N - 1
+	maxTileCoord := int(math.Pow(2, float64(zoom))) - 1
+	if xMin < 0 {
+		xMin = 0
+	}
+	if xMax > maxTileCoord {
+		xMax = maxTileCoord
+	}
+	if yMin < 0 {
+		yMin = 0
+	}
+	if yMax > maxTileCoord {
+		yMax = maxTileCoord
+	}
+	tilesX = xMax - xMin + 1
+	tilesY = yMax - yMin + 1
+	totalTiles = tilesX * tilesY
+
+	if totalTiles > maxTiles {
+		for z := zoom - 1; z >= 1; z-- {
+			xMin, xMax, yMin, yMax, tilesX, tilesY = recompute(z)
+
+			// Clamp again after recomputing
+			maxTileCoord = int(math.Pow(2, float64(z))) - 1
+			if xMin < 0 {
+				xMin = 0
+			}
+			if xMax > maxTileCoord {
+				xMax = maxTileCoord
+			}
+			if yMin < 0 {
+				yMin = 0
+			}
+			if yMax > maxTileCoord {
+				yMax = maxTileCoord
+			}
+			tilesX = xMax - xMin + 1
+			tilesY = yMax - yMin + 1
+			totalTiles = tilesX * tilesY
+
+			if totalTiles <= maxTiles {
+				log.Printf("Tile grid too large at zoom %d, clamped to zoom %d (%d tiles)\n", zoom, z, totalTiles)
+				zoom = z
+				break
+			}
+		}
+	}
+
+	log.Printf("Tile grid: %dx%d (total %d tiles)\n", tilesX, tilesY, totalTiles)
 
 	totalWidth := float32(tilesX * tileSize)
 	totalHeight := float32(tilesY * tileSize)
@@ -656,151 +560,135 @@ func createMapCanvasFromAPI(locations []*models.LocationCoords) fyne.CanvasObjec
 	// background
 	mapBg := canvas.NewRectangle(BgDarker)
 	mapBg.SetMinSize(fyne.NewSize(mapWidth, mapHeight))
-
-	mapContainer := container.New(layout.NewMaxLayout())
 	mapContainer.Add(mapBg)
 
-	toLat := func(lat float64) float32 {
-		if latRange == 0 {
-			return mapHeight / 2
-		}
-		return mapHeight - float32((lat-minLat)/latRange)*mapHeight
-	}
-	toLon := func(lon float64) float32 {
-		if lonRange == 0 {
-			return mapWidth / 2
-		}
-		return float32((lon-minLon)/lonRange) * mapWidth
-	}
-
-	for _, loc := range locations {
-		x := toLon(loc.Lon)
-		y := toLat(loc.Lat)
 	// a dedicated container for absolute placement
 	tileContainer := container.NewWithoutLayout()
 
-	// fetch tiles (concurrently) into memory cache, then add UI objects on main thread
-	var wg sync.WaitGroup
-	client := &http.Client{Timeout: 10 * time.Second}
-	tilesData := make(map[string][]byte)
-	var tilesMu sync.Mutex
-
-	// Limit concurrent goroutines to respect OSM tile server rate limits
-	// OSM politely requests max 2-3 concurrent connections per IP
-	maxConcurrent := 2
-	semaphore := make(chan struct{}, maxConcurrent)
-
+	// Create placeholders immediately so map shows instantly
+	log.Println("Creating placeholder grid...")
 	for x := xMin; x <= xMax; x++ {
 		for y := yMin; y <= yMax; y++ {
-			wg.Add(1)
-			go func(tx, ty int) {
-				defer wg.Done()
-				semaphore <- struct{}{}        // acquire
-				defer func() { <-semaphore }() // release
-
-				// Small delay between requests to respect OSM rate limiting
-				time.Sleep(100 * time.Millisecond)
-
-				// try reading cache or downloading
-				path := tileCachePath(zoom, tx, ty)
-				if b, err := os.ReadFile(path); err == nil && len(b) > 0 {
-					tilesMu.Lock()
-					tilesData[fmt.Sprintf("%d_%d", tx, ty)] = b
-					tilesMu.Unlock()
-					return
-				}
-				// download
-				resBytes := getTileBytes(client, zoom, tx, ty)
-				if len(resBytes) > 0 {
-					_ = os.WriteFile(path, resBytes, 0o644)
-					tilesMu.Lock()
-					tilesData[fmt.Sprintf("%d_%d", tx, ty)] = resBytes
-					tilesMu.Unlock()
-				}
-			}(x, y)
+			rect := canvas.NewRectangle(ContrastColor(BgDarker))
+			rect.Move(fyne.NewPos(float32((x-xMin)*tileSize), float32((y-yMin)*tileSize)))
+			rect.Resize(fyne.NewSize(tileSize, tileSize))
+			tileContainer.Add(rect)
 		}
 	}
-	wg.Wait()
 
-	// now create and add UI objects on main thread
-	fyne.DoAndWait(func() {
-		for x := xMin; x <= xMax; x++ {
-			for y := yMin; y <= yMax; y++ {
-				key := fmt.Sprintf("%d_%d", x, y)
-				var res fyne.Resource
-				if b, ok := tilesData[key]; ok && len(b) > 0 {
-					res = fyne.NewStaticResource(fmt.Sprintf("%d_%d_%d.png", zoom, x, y), b)
-				} else {
-					res = fyne.NewStaticResource(fmt.Sprintf("%d_%d_%d.png", zoom, x, y), []byte{})
-				}
-				img := canvas.NewImageFromResource(res)
-				img.FillMode = canvas.ImageFillContain
-				img.Move(fyne.NewPos(float32((x-xMin)*tileSize), float32((y-yMin)*tileSize)))
-				img.Resize(fyne.NewSize(tileSize, tileSize))
-				tileContainer.Add(img)
-			}
-		}
+	tileContainer.Resize(fyne.NewSize(totalWidth, totalHeight))
+	mapContainer.Add(tileContainer)
 
-		// add markers
-		for _, loc := range locations {
-			tx, ty := latLonToTileXY(loc.Latitude, loc.Longitude, zoom)
-			px := float32((tx - float64(xMin)) * float64(tileSize))
-			py := float32((ty - float64(yMin)) * float64(tileSize))
+	// Separate container for markers (on top of tiles)
+	markerContainer := container.NewWithoutLayout()
+
+	// Add markers immediately
+	for _, loc := range locations {
+		tx, ty := latLonToTileXY(loc.Latitude, loc.Longitude, zoom)
+		px := float32((tx - float64(xMin)) * float64(tileSize))
+		py := float32((ty - float64(yMin)) * float64(tileSize))
 
 		marker := canvas.NewCircle(AccentPink)
 		marker.StrokeWidth = 1
 		marker.StrokeColor = AccentCyan
-		marker.Move(fyne.NewPos(x-5, y-5))
-		marker.Resize(fyne.NewSize(10, 10))
+		marker.Resize(fyne.NewSize(12, 12))
+		marker.Move(fyne.NewPos(px-6, py-6))
+		markerContainer.Add(marker)
 
-		mapContainer.Add(marker)
-
-		if len(locations) <= 50 || (len(locations) > 50 && indexOfLocation(locations, loc)%3 == 0) {
-			locationText := canvas.NewText(strings.Split(loc.Location, ",")[0], TextLight)
+		if len(locations) <= 50 || (len(locations) > 50 && indexOfLocationFromAPI(locations, loc)%3 == 0) {
+			locationName := strings.ReplaceAll(loc.Lieux, "_", " ")
+			locationName = strings.ReplaceAll(locationName, "-", ", ")
+			parts := strings.Split(locationName, ",")
+			displayName := parts[0]
+			if len(parts) > 1 {
+				displayName = parts[len(parts)-1]
+			}
+			locationText := canvas.NewText(strings.TrimSpace(displayName), ContrastColor(BgDarker))
 			locationText.TextSize = 9
-			locationText.Move(fyne.NewPos(x+10, y-5))
-			mapContainer.Add(locationText)
+			locationText.Move(fyne.NewPos(px+10, py-5))
+			markerContainer.Add(locationText)
 		}
 	}
 
-	gridColor := color.RGBA{R: 100, G: 100, B: 100, A: 30}
+	markerContainer.Resize(fyne.NewSize(totalWidth, totalHeight))
+	mapContainer.Add(markerContainer)
 
-	for i := 0; i <= 3; i++ {
-		x := float32(i) * mapWidth / 3
-		line := canvas.NewLine(gridColor)
-		line.StrokeWidth = 0.5
-		line.Position1 = fyne.NewPos(x, 0)
-		line.Position2 = fyne.NewPos(x, mapHeight)
-		mapContainer.Add(line)
-			marker := canvas.NewCircle(AccentPink)
-			marker.StrokeWidth = 1
-			marker.StrokeColor = AccentCyan
-			marker.Resize(fyne.NewSize(12, 12))
-			marker.Move(fyne.NewPos(px-6, py-6))
-			tileContainer.Add(marker)
-
-			if len(locations) <= 50 || (len(locations) > 50 && indexOfLocationFromAPI(locations, loc)%3 == 0) {
-				locationName := strings.ReplaceAll(loc.Lieux, "_", " ")
-				locationName = strings.ReplaceAll(locationName, "-", ", ")
-				parts := strings.Split(locationName, ",")
-				displayName := parts[0]
-				if len(parts) > 1 {
-					displayName = parts[len(parts)-1]
-				}
-				locationText := canvas.NewText(strings.TrimSpace(displayName), ContrastColor(BgDarker))
-				locationText.TextSize = 9
-				locationText.Move(fyne.NewPos(px+10, py-5))
-				tileContainer.Add(locationText)
-			}
-		}
-
-		tileContainer.Resize(fyne.NewSize(totalWidth, totalHeight))
-		mapContainer.Add(tileContainer)
-	})
-
-	// wrap in scroll so user can pan
 	scroll := container.NewScroll(mapContainer)
 	scroll.SetMinSize(fyne.NewSize(mapWidth, mapHeight))
+
+	// Now fetch tiles in background and update placeholders when ready
+	go func() {
+		var wg sync.WaitGroup
+		client := &http.Client{Timeout: 5 * time.Second}
+		tilesData := make(map[string][]byte)
+		var tilesMu sync.Mutex
+
+		maxConcurrent := 4
+		semaphore := make(chan struct{}, maxConcurrent)
+
+		tilesDownloaded := 0
+		for x := xMin; x <= xMax; x++ {
+			for y := yMin; y <= yMax; y++ {
+				wg.Add(1)
+				go func(tx, ty int) {
+					defer wg.Done()
+					semaphore <- struct{}{}        // acquire
+					defer func() { <-semaphore }() // release
+
+					time.Sleep(30 * time.Millisecond)
+
+					path := tileCachePath(zoom, tx, ty)
+					if b, err := os.ReadFile(path); err == nil && len(b) > 0 {
+						if looksLikePNG(b) {
+							tilesMu.Lock()
+							tilesData[fmt.Sprintf("%d_%d", tx, ty)] = b
+							tilesMu.Unlock()
+
+							// Update UI immediately
+							fyne.Do(func() {
+								res := fyne.NewStaticResource(fmt.Sprintf("%d_%d_%d.png", zoom, tx, ty), b)
+								img := canvas.NewImageFromResource(res)
+								img.FillMode = canvas.ImageFillContain
+								img.Move(fyne.NewPos(float32((tx-xMin)*tileSize), float32((ty-yMin)*tileSize)))
+								img.Resize(fyne.NewSize(tileSize, tileSize))
+								tileContainer.Add(img)
+								tileContainer.Refresh()
+							})
+							return
+						}
+						_ = os.Remove(path)
+					}
+
+					resBytes := getTileBytes(client, zoom, tx, ty)
+					if len(resBytes) > 0 {
+						_ = os.WriteFile(path, resBytes, 0o644)
+						tilesMu.Lock()
+						tilesData[fmt.Sprintf("%d_%d", tx, ty)] = resBytes
+						tilesDownloaded++
+						if tilesDownloaded%10 == 0 || tilesDownloaded == tilesX*tilesY {
+							log.Printf("Downloading tiles: %d/%d\n", tilesDownloaded, tilesX*tilesY)
+						}
+						tilesMu.Unlock()
+
+						// Update UI immediately
+						fyne.Do(func() {
+							res := fyne.NewStaticResource(fmt.Sprintf("%d_%d_%d.png", zoom, tx, ty), resBytes)
+							img := canvas.NewImageFromResource(res)
+							img.FillMode = canvas.ImageFillContain
+							img.Move(fyne.NewPos(float32((tx-xMin)*tileSize), float32((ty-yMin)*tileSize)))
+							img.Resize(fyne.NewSize(tileSize, tileSize))
+							tileContainer.Add(img)
+							tileContainer.Refresh()
+						})
+					}
+				}(x, y)
+			}
+		}
+		wg.Wait()
+		log.Printf("Finished downloading %d tiles (expected %d)\n", len(tilesData), tilesX*tilesY)
+	}()
+
+	log.Println("Map canvas completed (loading tiles in background)")
 	return scroll
 }
 
@@ -823,27 +711,6 @@ func getTileResource(client *http.Client, zoom, x, y int) fyne.Resource {
 		return fyne.NewStaticResource(fmt.Sprintf("%d_%d_%d.png", zoom, x, y), b)
 	}
 
-	for i := 0; i <= 3; i++ {
-		y := float32(i) * mapHeight / 3
-		line := canvas.NewLine(gridColor)
-		line.StrokeWidth = 0.5
-		line.Position1 = fyne.NewPos(0, y)
-		line.Position2 = fyne.NewPos(mapWidth, y)
-		mapContainer.Add(line)
-	}
-
-	topLeft := canvas.NewText(fmt.Sprintf("%.1f°N, %.1f°W", maxLat, minLon), TextLight)
-	topLeft.TextSize = 8
-	topLeft.Move(fyne.NewPos(5, 5))
-	mapContainer.Add(topLeft)
-
-	bottomRight := canvas.NewText(fmt.Sprintf("%.1f°S, %.1f°E", minLat, maxLon), TextLight)
-	bottomRight.TextSize = 8
-	bottomRight.Move(fyne.NewPos(mapWidth-100, mapHeight-20))
-	mapContainer.Add(bottomRight)
-
-	mapContainer.Resize(fyne.NewSize(mapWidth, mapHeight))
-	return mapContainer
 	// fallback to downloading via getTileBytes
 	if b := getTileBytes(client, zoom, x, y); len(b) > 0 {
 		_ = os.WriteFile(path, b, 0o644)
@@ -881,12 +748,23 @@ func getTileBytes(client *http.Client, zoom, x, y int) []byte {
 		if err != nil {
 			continue
 		}
+		if !looksLikePNG(data) {
+			log.Printf("[TILE INVALID] zoom=%d x=%d y=%d: not PNG (maybe rate limited)\n", zoom, x, y)
+			continue
+		}
 		return data
 	}
 	return nil
 }
 
-func indexOfLocation(locations []*LocationCoords, target *LocationCoords) int {
+// quick signature check to avoid passing HTML/error pages to Fyne image loader
+func looksLikePNG(b []byte) bool {
+	if len(b) < 8 {
+		return false
+	}
+	return string(b[:8]) == "\x89PNG\r\n\x1a\n"
+}
+
 // convert lat/lon to slippy map tile coords (floating)
 func latLonToTileXY(lat, lon float64, zoom int) (float64, float64) {
 	latRad := lat * math.Pi / 180.0
@@ -906,53 +784,10 @@ func indexOfLocationFromAPI(locations []*models.LocationCoords, target *models.L
 	return -1
 }
 
-func generateStaticMapURL(locations []*LocationCoords) string {
-	if len(locations) == 0 {
-		return ""
-	}
-
-	minLat := locations[0].Lat
-	maxLat := locations[0].Lat
-	minLon := locations[0].Lon
-	maxLon := locations[0].Lon
-
-	for _, loc := range locations {
-		if loc.Lat < minLat {
-			minLat = loc.Lat
-		}
-		if loc.Lat > maxLat {
-			maxLat = loc.Lat
-		}
-		if loc.Lon < minLon {
-			minLon = loc.Lon
-		}
-		if loc.Lon > maxLon {
-			maxLon = loc.Lon
-		}
-	}
-
-	centerLat := (minLat + maxLat) / 2
-	centerLon := (minLon + maxLon) / 2
-
-	baseURL := "https://maps.googleapis.com/maps/api/staticmap?"
-	params := fmt.Sprintf("center=%.6f,%.6f&zoom=3&size=1200x700&style=feature:all|element:labels|visibility:off", centerLat, centerLon)
-
-	for i, loc := range locations {
-		if i >= 50 {
-			break
-		}
-		params += fmt.Sprintf("&markers=color:red|%.6f,%.6f", loc.Lat, loc.Lon)
-	}
-
-	return baseURL + params + "&key=AIzaSyB41DRUbKWJHPxagoK4fLi1aZjqsqOlEdE"
-}
-
-func createLocationsList(locations []*LocationCoords) *fyne.Container {
 // liste lieux
 func createLocationsListFromAPI(locations []*models.LocationCoords, concertsByLocation map[string][]ConcertInfo) *fyne.Container {
 	var items []fyne.CanvasObject
 
-	titleLabel := widget.NewLabel("Liste des lieux de concerts")
 	// titre de la liste
 	titleLabel := widget.NewLabel(T().LocationsListTitle)
 	titleLabel.TextStyle = fyne.TextStyle{Bold: true}
@@ -960,7 +795,6 @@ func createLocationsListFromAPI(locations []*models.LocationCoords, concertsByLo
 	items = append(items, widget.NewSeparator())
 
 	for _, loc := range locations {
-		locationName := strings.ReplaceAll(loc.Location, "_", " ")
 		// conteneur pour chaque lieu
 		locationName := strings.ReplaceAll(loc.Lieux, "_", " ")
 		locationName = strings.ReplaceAll(locationName, "-", ", ")
@@ -972,24 +806,12 @@ func createLocationsListFromAPI(locations []*models.LocationCoords, concertsByLo
 
 		items = append(items, locLabel)
 
-		for _, concert := range loc.Concerts {
-			artistLabel := widget.NewLabel("  " + concert.Artist)
-			items = append(items, artistLabel)
 		// liste les concerts associés
 		if concerts, ok := concertsByLocation[loc.Lieux]; ok {
 			for _, concert := range concerts {
 				artistLabel := widget.NewLabel("  ♫ " + concert.Artist)
 				items = append(items, artistLabel)
 
-			maxDates := 3
-			for i, date := range concert.Dates {
-				if i >= maxDates {
-					remaining := len(concert.Dates) - maxDates
-					items = append(items, widget.NewLabel(fmt.Sprintf("      ... et %d autres dates", remaining)))
-					break
-				}
-				dateLabel := widget.NewLabel("      • " + date)
-				items = append(items, dateLabel)
 				// on affiche quelques dates
 				maxDates := 3
 				for i, date := range concert.Dates {
