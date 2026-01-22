@@ -1,6 +1,6 @@
 # Groupie Tracker - Interface UI (Partie Personne 2)
 
-## 📁 Structure du projet
+## Structure du projet
 
 ```
 /
@@ -44,27 +44,25 @@
 - **Ctrl + Q** : Quitter l'application
 - **Ctrl + F** : Focus recherche (callback fourni)
 
-## 🚀 Installation et lancement
+## Installation et lancement
 
 ```bash
-# Installer les dépendances
+
 go mod tidy
 
-# Lancer l'application
+
 go run main.go
 ```
 
-## 🔌 Intégration avec le backend
+## Integration avec le backend
 
 Le code actuel utilise des données de test dans `getDummyArtists()`.
 
 **Pour connecter au vrai backend**, remplacer dans `main.go` :
 
 ```go
-// AVANT (données test)
 artists := getDummyArtists()
 
-// APRÈS (vrai API)
 artists, err := api.GetArtists()
 if err != nil {
     dialog.ShowError(err, appUI.Window)
@@ -72,7 +70,7 @@ if err != nil {
 }
 ```
 
-## 📝 Notes importantes
+## Notes importantes
 
 ### Aucun appel API direct
 Tout passe par des fonctions backend du type :
@@ -93,7 +91,7 @@ Utiliser les dialogues Fyne :
 dialog.ShowError(err, appUI.Window)
 ```
 
-## 🎨 Améliorations possibles
+## Ameliorations possibles
 
 1. **Images d'artistes** : Ajouter `canvas.NewImageFromURI()` dans les cartes
 2. **Recherche** : Implémenter la fonction `onSearch` avec un `widget.Entry`
@@ -101,11 +99,11 @@ dialog.ShowError(err, appUI.Window)
 4. **Style** : Personnaliser les couleurs avec un thème Fyne
 5. **Animations** : Ajouter des transitions entre les vues
 
-## 📦 Dépendances
+## Dependances
 
 - **Fyne v2.4.3** : Framework UI cross-platform
 - Go 1.21+
 
 ---
 
-**Prêt pour l'intégration avec le backend ! 🎉**
+**Pret pour l'integration avec le backend !**

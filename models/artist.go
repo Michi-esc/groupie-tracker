@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-// Artist représente un artiste
 type Artist struct {
 	ID           int      `json:"id"`
 	Image        string   `json:"image"`
@@ -19,12 +18,10 @@ type Artist struct {
 	ConcertDates string   `json:"concertDates"`
 	Relations    string   `json:"relations"`
 
-	// Champs enrichis (remplis après le fetch)
-	LocationsList []string `json:"-"` // Liste des lieux de concert
-	DatesList     []string `json:"-"` // Liste des dates de concert
+	LocationsList []string `json:"-"`
+	DatesList     []string `json:"-"`
 }
 
-// RelationData contient les relations entre lieux et dates
 type RelationData struct {
 	Index []struct {
 		ID             int                 `json:"id"`
@@ -39,9 +36,7 @@ var (
 	cacheDuration   = 5 * time.Minute
 )
 
-// FetchArtists récupère la liste des artistes depuis l'API
 func FetchArtists() ([]Artist, error) {
-	// Vérifier le cache
 	if time.Since(lastFetchTime) < cacheDuration && len(cachedArtists) > 0 {
 		return cachedArtists, nil
 	}
@@ -61,14 +56,12 @@ func FetchArtists() ([]Artist, error) {
 		return nil, fmt.Errorf("erreur lors du décodage JSON: %v", err)
 	}
 
-	// Mettre à jour le cache
 	cachedArtists = artists
 	lastFetchTime = time.Now()
 
 	return artists, nil
 }
 
-// FetchRelations récupère les relations entre lieux et dates
 func FetchRelations() (*RelationData, error) {
 	if time.Since(lastFetchTime) < cacheDuration && cachedRelations != nil {
 		return cachedRelations, nil

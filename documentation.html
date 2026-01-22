@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guide Complet - Groupie Tracker en Go</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+            color: #e0e0e0;
+            line-height: 1.8;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #00d4ff;
+            font-size: 2.5em;
+            margin-bottom: 40px;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        }
+        
+        h2 {
+            color: #ff006e;
+            font-size: 1.8em;
+            margin: 40px 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ff006e;
+        }
+        
+        h3 {
+            color: #00d4ff;
+            font-size: 1.3em;
+            margin: 25px 0 15px 0;
+        }
+        
+        h4 {
+            color: #ffd700;
+            font-size: 1.1em;
+            margin: 20px 0 10px 0;
+        }
+        
+        p {
+            margin: 15px 0;
+            color: #c8c8c8;
+        }
+        
+        code {
+            background: #2d2d44;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #00ff88;
+            font-size: 0.9em;
+        }
+        
+        pre {
+            background: #1e1e30;
+            padding: 20px;
+            border-radius: 10px;
+            overflow-x: auto;
+            margin: 15px 0;
+            border-left: 4px solid #00d4ff;
+        }
+        
+        pre code {
+            background: none;
+            padding: 0;
+            color: #e0e0e0;
+            display: block;
+            line-height: 1.6;
+        }
+        
+        .keyword { color: #569cd6; }
+        .string { color: #ce9178; }
+        .function { color: #dcdcaa; }
+        .type { color: #4ec9b0; }
+        .number { color: #b5cea8; }
+        
+        ul, ol {
+            margin: 15px 0 15px 30px;
+        }
+        
+        li {
+            margin: 8px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: #1e1e30;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        th {
+            background: #2d2d44;
+            color: #00d4ff;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #3d3d5c;
+        }
+        
+        tr:hover {
+            background: #2a2a40;
+        }
+        
+        .card {
+            background: linear-gradient(145deg, #1e1e30, #252540);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border: 1px solid #3d3d5c;
+        }
+        
+        .highlight {
+            background: linear-gradient(90deg, #00d4ff20, transparent);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #00d4ff;
+            margin: 15px 0;
+        }
+        
+        .warning {
+            background: linear-gradient(90deg, #ff006e20, transparent);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ff006e;
+            margin: 15px 0;
+        }
+        
+        .success {
+            background: linear-gradient(90deg, #00ff8820, transparent);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #00ff88;
+            margin: 15px 0;
+        }
+        
+        .toc {
+            background: #1e1e30;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 40px;
+        }
+        
+        .toc h3 {
+            margin-top: 0;
+        }
+        
+        .toc a {
+            color: #00d4ff;
+            text-decoration: none;
+            display: block;
+            padding: 5px 0;
+            transition: all 0.3s;
+        }
+        
+        .toc a:hover {
+            color: #ff006e;
+            padding-left: 10px;
+        }
+        
+        .schema {
+            background: #0f0f1a;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Consolas', monospace;
+            white-space: pre;
+            overflow-x: auto;
+            color: #00d4ff;
+            line-height: 1.4;
+        }
+        
+        .file-structure {
+            background: #0f0f1a;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Consolas', monospace;
+            color: #ffd700;
+        }
+        
+        .btn-print {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1em;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4);
+            transition: all 0.3s;
+        }
+        
+        .btn-print:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(0, 212, 255, 0.6);
+        }
+        
+        @media print {
+            body {
+                background: white;
+                color: black;
+            }
+            .btn-print {
+                display: none;
+            }
+            pre, code, .card, table {
+                background: #f5f5f5;
+            }
+            h1, h2, h3, h4 {
+                color: #333;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>GUIDE COMPLET : GROUPIE TRACKER EN GO</h1>
+        
+        <div class="toc">
+            <h3>Table des matieres</h3>
+            <a href="#intro">1. C'est quoi ce projet ?</a>
+            <a href="#tech">2. Les technologies utilisées</a>
+            <a href="#structure">3. Structure du projet</a>
+            <a href="#fichiers">4. Explication fichier par fichier</a>
+            <a href="#lancer">5. Comment lancer le projet</a>
+            <a href="#concepts">6. Concepts Go à retenir</a>
+            <a href="#widgets">7. Widgets Fyne à retenir</a>
+            <a href="#schema">8. Schéma de l'application</a>
+            <a href="#resume">9. Résumé ultra-court</a>
+        </div>
+
+        <h2 id="intro">1. C'est quoi ce projet ?</h2>
+        <div class="card">
+            <p><strong>Groupie Tracker</strong> est une application de bureau (pas web) qui :</p>
+            <ul>
+                <li>Récupère des informations sur des artistes musicaux depuis une API</li>
+                <li>Affiche la liste des artistes avec leurs photos</li>
+                <li>Permet de voir les détails de chaque artiste (membres, dates de concerts, etc.)</li>
+                <li>Affiche une carte des lieux de concert</li>
+            </ul>
+        </div>
+
+        <h2 id="tech">2. Les technologies utilisees</h2>
+        
+        <div class="card">
+            <h3>Go (Golang)</h3>
+            <ul>
+                <li><strong>Langage de programmation</strong> créé par Google</li>
+                <li>Compilé, rapide, simple à apprendre</li>
+                <li>Fichier = <code>*.go</code></li>
+            </ul>
+        </div>
+        
+        <div class="card">
+            <h3>Fyne</h3>
+            <ul>
+                <li><strong>Bibliothèque graphique</strong> pour créer des interfaces (fenêtres, boutons, etc.)</li>
+                <li>Alternative à Qt, GTK, etc.</li>
+                <li>Import : <code>fyne.io/fyne/v2</code></li>
+            </ul>
+        </div>
+        
+        <div class="card">
+            <h3>API REST</h3>
+            <ul>
+                <li>L'application récupère les données depuis : <code>https://groupietrackers.herokuapp.com/api/</code></li>
+                <li>Format des données : <strong>JSON</strong></li>
+            </ul>
+        </div>
+
+        <h2 id="structure">3. Structure du projet</h2>
+        <div class="file-structure">
+groupie-tracker/
+├── go.mod           ← Fichier de configuration Go (dépendances)
+├── main.go          ← Point d'entrée de l'application
+├── server.go        ← Serveur web (non utilisé dans la version desktop)
+├── models/          
+│   └── artist.go    ← Définition des structures de données (Artist, Relations)
+├── ui/              
+│   ├── artist_list.go  ← Page liste des artistes
+│   ├── artist_page.go  ← Page détail d'un artiste
+│   ├── map_page.go     ← Page carte des concerts
+│   ├── window.go       ← Gestion de la fenêtre principale
+│   ├── theme.go        ← Thème personnalisé (couleurs)
+│   └── colors.go       ← Définition des couleurs
+└── web/             ← Fichiers web (alternative navigateur)
+        </div>
+
+        <h2 id="fichiers">4. Explication fichier par fichier</h2>
+
+        <div class="card">
+            <h3>go.mod - Configuration du projet</h3>
+<pre><code><span class="keyword">module</span> groupie-tracker
+
+<span class="keyword">go</span> <span class="number">1.25.0</span>
+
+<span class="keyword">require</span> fyne.io/fyne/v2 v2.7.2</code></pre>
+            <div class="highlight">
+                <strong>À retenir :</strong>
+                <ul>
+                    <li><code>go mod init nom-projet</code> → crée ce fichier</li>
+                    <li><code>go mod tidy</code> → télécharge les dépendances</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>main.go - Point d'entree</h3>
+<pre><code><span class="keyword">package</span> main
+
+<span class="keyword">import</span> (
+    <span class="string">"groupie-tracker/models"</span>
+    <span class="string">"groupie-tracker/ui"</span>
+    <span class="string">"fyne.io/fyne/v2/app"</span>
+)
+
+<span class="keyword">func</span> <span class="function">main</span>() {
+    myApp := app.<span class="function">New</span>()
+    
+    myApp.<span class="function">Settings</span>().<span class="function">SetTheme</span>(&ui.CustomTheme{})
+    
+    win := ui.<span class="function">NewWindow</span>(myApp)
+    
+    <span class="function">showArtistList</span>(win)
+    
+    win.Window.<span class="function">ShowAndRun</span>()
+}</code></pre>
+
+            <h4>Fonctions de navigation :</h4>
+<pre><code><span class="keyword">func</span> <span class="function">showArtistList</span>(win *ui.Window) {
+    win.<span class="function">ShowLoading</span>(<span class="string">"Chargement..."</span>)
+    
+    <span class="keyword">go</span> <span class="keyword">func</span>() {
+        artists, err := models.<span class="function">FetchArtists</span>()
+        <span class="keyword">if</span> err != <span class="keyword">nil</span> {
+            dialog.<span class="function">ShowError</span>(err, win.Window)
+            <span class="keyword">return</span>
+        }
+        
+        list := ui.<span class="function">NewArtistList</span>(artists, onSelect, onShowMap)
+        win.<span class="function">SetContent</span>(list)
+    }()
+}</code></pre>
+            <div class="warning">
+                <strong>Concepts clés :</strong>
+                <ul>
+                    <li><code>go func() { ... }()</code> = <strong>Goroutine</strong> (exécution asynchrone)</li>
+                    <li><code>err</code> = gestion des erreurs en Go (toujours vérifier !)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>models/artist.go - Les structures de donnees</h3>
+<pre><code><span class="keyword">package</span> models
+
+<span class="keyword">type</span> <span class="type">Artist</span> <span class="keyword">struct</span> {
+    ID           <span class="type">int</span>      <span class="string">`json:"id"`</span>
+    Image        <span class="type">string</span>   <span class="string">`json:"image"`</span>
+    Name         <span class="type">string</span>   <span class="string">`json:"name"`</span>
+    Members      []<span class="type">string</span> <span class="string">`json:"members"`</span>
+    CreationDate <span class="type">int</span>      <span class="string">`json:"creationDate"`</span>
+    FirstAlbum   <span class="type">string</span>   <span class="string">`json:"firstAlbum"`</span>
+    Locations    <span class="type">string</span>   <span class="string">`json:"locations"`</span>
+    
+    LocationsList []<span class="type">string</span> <span class="string">`json:"-"`</span>
+}</code></pre>
+
+            <h4>Fetch des données (requête HTTP) :</h4>
+<pre><code><span class="keyword">var</span> (
+    cachedArtists []<span class="type">Artist</span>
+    lastFetchTime <span class="type">time.Time</span>
+    cacheDuration = <span class="number">5</span> * time.Minute
+)
+
+<span class="keyword">func</span> <span class="function">FetchArtists</span>() ([]<span class="type">Artist</span>, <span class="type">error</span>) {
+    <span class="keyword">if</span> time.<span class="function">Since</span>(lastFetchTime) < cacheDuration && <span class="function">len</span>(cachedArtists) > <span class="number">0</span> {
+        <span class="keyword">return</span> cachedArtists, <span class="keyword">nil</span>
+    }
+    
+    resp, err := http.<span class="function">Get</span>(<span class="string">"https://groupietrackers.herokuapp.com/api/artists"</span>)
+    <span class="keyword">if</span> err != <span class="keyword">nil</span> {
+        <span class="keyword">return</span> <span class="keyword">nil</span>, fmt.<span class="function">Errorf</span>(<span class="string">"erreur: %v"</span>, err)
+    }
+    <span class="keyword">defer</span> resp.Body.<span class="function">Close</span>()
+    
+    <span class="keyword">var</span> artists []<span class="type">Artist</span>
+    json.<span class="function">NewDecoder</span>(resp.Body).<span class="function">Decode</span>(&artists)
+    
+    cachedArtists = artists
+    lastFetchTime = time.<span class="function">Now</span>()
+    
+    <span class="keyword">return</span> artists, <span class="keyword">nil</span>
+}</code></pre>
+
+            <div class="success">
+                <strong>Concepts clés :</strong>
+                <ul>
+                    <li><code>struct</code> = structure (comme une classe sans méthodes)</li>
+                    <li><code>[]string</code> = slice (tableau dynamique)</li>
+                    <li><code>map[string][]string</code> = dictionnaire (clé → valeur)</li>
+                    <li><code>defer</code> = exécute à la fin de la fonction</li>
+                    <li><code>json:"name"</code> = tag pour la conversion JSON ↔ Go</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>ui/window.go - La fenetre principale</h3>
+<pre><code><span class="keyword">package</span> ui
+
+<span class="keyword">type</span> <span class="type">Window</span> <span class="keyword">struct</span> {
+    Window  fyne.<span class="type">Window</span>
+    Content *fyne.<span class="type">Container</span>
+}
+
+<span class="keyword">func</span> <span class="function">NewWindow</span>(app fyne.<span class="type">App</span>) *<span class="type">Window</span> {
+    w := app.<span class="function">NewWindow</span>(<span class="string">"Groupie Tracker"</span>)
+    w.<span class="function">Resize</span>(fyne.<span class="function">NewSize</span>(<span class="number">1200</span>, <span class="number">800</span>))
+    w.<span class="function">CenterOnScreen</span>()
+    
+    content := container.<span class="function">NewMax</span>()
+    w.<span class="function">SetContent</span>(content)
+    
+    <span class="keyword">return</span> &<span class="type">Window</span>{Window: w, Content: content}
+}
+
+<span class="keyword">func</span> (w *<span class="type">Window</span>) <span class="function">SetContent</span>(content fyne.<span class="type">CanvasObject</span>) {
+    fyne.<span class="function">Do</span>(<span class="keyword">func</span>() {
+        w.Content.Objects = []fyne.<span class="type">CanvasObject</span>{content}
+        w.Content.<span class="function">Refresh</span>()
+    })
+}
+
+<span class="keyword">func</span> (w *<span class="type">Window</span>) <span class="function">ShowLoading</span>(message <span class="type">string</span>) {
+    progress := widget.<span class="function">NewProgressBarInfinite</span>()
+    label := widget.<span class="function">NewLabel</span>(message)
+    
+    content := container.<span class="function">NewCenter</span>(
+        container.<span class="function">NewVBox</span>(progress, label),
+    )
+    w.<span class="function">SetContent</span>(content)
+}</code></pre>
+
+            <div class="highlight">
+                <strong>Concepts clés :</strong>
+                <ul>
+                    <li><code>fyne.Do()</code> = exécute dans le thread principal (obligatoire pour modifier l'UI)</li>
+                    <li><code>container.NewVBox()</code> = empile verticalement</li>
+                    <li><code>container.NewHBox()</code> = aligne horizontalement</li>
+                    <li><code>container.NewCenter()</code> = centre le contenu</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>ui/colors.go - Les couleurs</h3>
+<pre><code><span class="keyword">package</span> ui
+
+<span class="keyword">import</span> <span class="string">"image/color"</span>
+
+<span class="keyword">var</span> (
+    BgDark     = color.<span class="type">RGBA</span>{R: <span class="number">15</span>, G: <span class="number">12</span>, B: <span class="number">41</span>, A: <span class="number">255</span>}
+    BgDarker   = color.<span class="type">RGBA</span>{R: <span class="number">10</span>, G: <span class="number">8</span>, B: <span class="number">30</span>, A: <span class="number">255</span>}
+    AccentCyan = color.<span class="type">RGBA</span>{R: <span class="number">0</span>, G: <span class="number">212</span>, B: <span class="number">255</span>, A: <span class="number">255</span>}
+    AccentPink = color.<span class="type">RGBA</span>{R: <span class="number">255</span>, G: <span class="number">0</span>, B: <span class="number">110</span>, A: <span class="number">255</span>}
+    TextWhite  = color.<span class="type">RGBA</span>{R: <span class="number">255</span>, G: <span class="number">255</span>, B: <span class="number">255</span>, A: <span class="number">255</span>}
+    TextLight  = color.<span class="type">RGBA</span>{R: <span class="number">200</span>, G: <span class="number">200</span>, B: <span class="number">200</span>, A: <span class="number">255</span>}
+    CardBg     = color.<span class="type">RGBA</span>{R: <span class="number">25</span>, G: <span class="number">22</span>, B: <span class="number">60</span>, A: <span class="number">255</span>}
+)</code></pre>
+            <div class="highlight">
+                <strong>Concept :</strong> <code>color.RGBA{R, G, B, A}</code> = Rouge, Vert, Bleu, Alpha (transparence)
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>ui/theme.go - Le theme personnalise</h3>
+<pre><code><span class="keyword">package</span> ui
+
+<span class="keyword">type</span> <span class="type">CustomTheme</span> <span class="keyword">struct</span>{}
+
+<span class="keyword">var</span> _ fyne.<span class="type">Theme</span> = (*<span class="type">CustomTheme</span>)(<span class="keyword">nil</span>)
+
+<span class="keyword">func</span> (m <span class="type">CustomTheme</span>) <span class="function">Color</span>(name fyne.<span class="type">ThemeColorName</span>, variant fyne.<span class="type">ThemeVariant</span>) color.<span class="type">Color</span> {
+    <span class="keyword">switch</span> name {
+    <span class="keyword">case</span> theme.ColorNameBackground:
+        <span class="keyword">return</span> BgDark
+    <span class="keyword">case</span> theme.ColorNameButton:
+        <span class="keyword">return</span> AccentCyan
+    <span class="keyword">case</span> theme.ColorNameForeground:
+        <span class="keyword">return</span> TextWhite
+    <span class="keyword">default</span>:
+        <span class="keyword">return</span> theme.<span class="function">DefaultTheme</span>().<span class="function">Color</span>(name, variant)
+    }
+}
+
+<span class="keyword">func</span> (m <span class="type">CustomTheme</span>) <span class="function">Icon</span>(name fyne.<span class="type">ThemeIconName</span>) fyne.<span class="type">Resource</span> {
+    <span class="keyword">return</span> theme.<span class="function">DefaultTheme</span>().<span class="function">Icon</span>(name)
+}
+
+<span class="keyword">func</span> (m <span class="type">CustomTheme</span>) <span class="function">Font</span>(style fyne.<span class="type">TextStyle</span>) fyne.<span class="type">Resource</span> {
+    <span class="keyword">return</span> theme.<span class="function">DefaultTheme</span>().<span class="function">Font</span>(style)
+}
+
+<span class="keyword">func</span> (m <span class="type">CustomTheme</span>) <span class="function">Size</span>(name fyne.<span class="type">ThemeSizeName</span>) <span class="type">float32</span> {
+    <span class="keyword">return</span> theme.<span class="function">DefaultTheme</span>().<span class="function">Size</span>(name)
+}</code></pre>
+            <div class="warning">
+                <strong>Concept :</strong> Interface = contrat que doit respecter une structure
+            </div>
+        </div>
+
+        <h2 id="lancer">5. Comment lancer le projet</h2>
+        
+        <div class="card">
+            <h3>Prérequis</h3>
+            <ol>
+                <li><strong>Installer Go</strong> : <a href="https://go.dev/dl/" style="color: #00d4ff;">https://go.dev/dl/</a></li>
+                <li><strong>Vérifier l'installation</strong> : <code>go version</code></li>
+            </ol>
+        </div>
+        
+        <div class="card">
+            <h3>Commandes</h3>
+<pre><code># Se placer dans le dossier
+cd c:\Users\GLITC\groupie-tracker
+
+# Télécharger les dépendances
+go mod tidy
+
+# Compiler et exécuter
+go run .
+
+# OU compiler un exécutable
+go build -o groupie-tracker.exe</code></pre>
+        </div>
+
+        <h2 id="concepts">6. Concepts Go a retenir</h2>
+        
+        <table>
+            <tr>
+                <th>Concept</th>
+                <th>Syntaxe</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td><strong>Package</strong></td>
+                <td><code>package main</code></td>
+                <td>Nom du module</td>
+            </tr>
+            <tr>
+                <td><strong>Import</strong></td>
+                <td><code>import "fmt"</code></td>
+                <td>Importer une lib</td>
+            </tr>
+            <tr>
+                <td><strong>Fonction</strong></td>
+                <td><code>func nom(param type) type {}</code></td>
+                <td>Déclaration</td>
+            </tr>
+            <tr>
+                <td><strong>Variable</strong></td>
+                <td><code>var x int = 5</code> ou <code>x := 5</code></td>
+                <td>Déclaration</td>
+            </tr>
+            <tr>
+                <td><strong>Slice</strong></td>
+                <td><code>[]string{"a", "b"}</code></td>
+                <td>Tableau dynamique</td>
+            </tr>
+            <tr>
+                <td><strong>Map</strong></td>
+                <td><code>map[string]int{}</code></td>
+                <td>Dictionnaire</td>
+            </tr>
+            <tr>
+                <td><strong>Struct</strong></td>
+                <td><code>type X struct { A int }</code></td>
+                <td>Structure de données</td>
+            </tr>
+            <tr>
+                <td><strong>Méthode</strong></td>
+                <td><code>func (x *X) Method()</code></td>
+                <td>Fonction sur struct</td>
+            </tr>
+            <tr>
+                <td><strong>Interface</strong></td>
+                <td><code>type I interface {}</code></td>
+                <td>Contrat</td>
+            </tr>
+            <tr>
+                <td><strong>Goroutine</strong></td>
+                <td><code>go func() {}()</code></td>
+                <td>Exécution parallèle</td>
+            </tr>
+            <tr>
+                <td><strong>Defer</strong></td>
+                <td><code>defer file.Close()</code></td>
+                <td>Exécute à la fin</td>
+            </tr>
+            <tr>
+                <td><strong>Pointeur</strong></td>
+                <td><code>&variable</code> / <code>*pointeur</code></td>
+                <td>Adresse mémoire</td>
+            </tr>
+        </table>
+
+        <h2 id="widgets">7. Widgets Fyne a retenir</h2>
+        
+        <table>
+            <tr>
+                <th>Widget</th>
+                <th>Code</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td><strong>Label</strong></td>
+                <td><code>widget.NewLabel("text")</code></td>
+                <td>Texte</td>
+            </tr>
+            <tr>
+                <td><strong>Button</strong></td>
+                <td><code>widget.NewButton("label", onClick)</code></td>
+                <td>Bouton</td>
+            </tr>
+            <tr>
+                <td><strong>Entry</strong></td>
+                <td><code>widget.NewEntry()</code></td>
+                <td>Champ texte</td>
+            </tr>
+            <tr>
+                <td><strong>Checkbox</strong></td>
+                <td><code>widget.NewCheck("label", onChange)</code></td>
+                <td>Case à cocher</td>
+            </tr>
+            <tr>
+                <td><strong>Image</strong></td>
+                <td><code>canvas.NewImageFromURI(uri)</code></td>
+                <td>Image</td>
+            </tr>
+            <tr>
+                <td><strong>Text</strong></td>
+                <td><code>canvas.NewText("text", color)</code></td>
+                <td>Texte stylé</td>
+            </tr>
+            <tr>
+                <td><strong>VBox</strong></td>
+                <td><code>container.NewVBox(...)</code></td>
+                <td>Empilement vertical</td>
+            </tr>
+            <tr>
+                <td><strong>HBox</strong></td>
+                <td><code>container.NewHBox(...)</code></td>
+                <td>Alignement horizontal</td>
+            </tr>
+            <tr>
+                <td><strong>Grid</strong></td>
+                <td><code>container.New(layout.NewGridLayout(4))</code></td>
+                <td>Grille</td>
+            </tr>
+            <tr>
+                <td><strong>Scroll</strong></td>
+                <td><code>container.NewScroll(content)</code></td>
+                <td>Zone scrollable</td>
+            </tr>
+            <tr>
+                <td><strong>Border</strong></td>
+                <td><code>container.NewBorder(top, bottom, left, right, center)</code></td>
+                <td>Layout bordure</td>
+            </tr>
+        </table>
+
+        <h2 id="schema">8. Schema de l'application</h2>
+        
+        <div class="schema">
+┌─────────────────────────────────────────────────────────┐
+│                     main.go                             │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
+│  │ showArtist  │  │ showArtist  │  │  showMap    │     │
+│  │    List     │→ │   Detail    │  │             │     │
+│  └─────────────┘  └─────────────┘  └─────────────┘     │
+└─────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│                    models/artist.go                     │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │  FetchArtists() → API → []Artist                │   │
+│  │  FetchRelations() → API → RelationData          │   │
+│  └─────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│                        ui/                              │
+│  ┌────────────┐ ┌────────────┐ ┌────────────┐          │
+│  │artist_list │ │artist_page │ │  map_page  │          │
+│  │    .go     │ │    .go     │ │    .go     │          │
+│  └────────────┘ └────────────┘ └────────────┘          │
+│  ┌────────────┐ ┌────────────┐ ┌────────────┐          │
+│  │ window.go  │ │  theme.go  │ │ colors.go  │          │
+│  └────────────┘ └────────────┘ └────────────┘          │
+└─────────────────────────────────────────────────────────┘
+        </div>
+
+        <h2 id="resume">9. Resume ultra-court</h2>
+        
+        <div class="card">
+            <ol>
+                <li><strong><code>main.go</code></strong> = démarre l'app, gère la navigation entre pages</li>
+                <li><strong><code>models/artist.go</code></strong> = structures de données + récupération API</li>
+                <li><strong><code>ui/window.go</code></strong> = gestion de la fenêtre</li>
+                <li><strong><code>ui/artist_list.go</code></strong> = page liste avec recherche/filtres</li>
+                <li><strong><code>ui/artist_page.go</code></strong> = page détail d'un artiste</li>
+                <li><strong><code>ui/map_page.go</code></strong> = carte des concerts</li>
+                <li><strong><code>ui/theme.go</code> + <code>colors.go</code></strong> = apparence visuelle</li>
+            </ol>
+        </div>
+
+        <div class="success" style="text-align: center; margin-top: 40px;">
+            <h3>Bonne revision !</h3>
+            <p>N'hésite pas à utiliser Ctrl+P pour imprimer cette page en PDF</p>
+        </div>
+
+        <button class="btn-print" onclick="window.print()">Imprimer / PDF</button>
+    </div>
+</body>
+</html>

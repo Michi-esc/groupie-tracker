@@ -2,7 +2,6 @@ package ui
 
 import "image/color"
 
-// Couleurs modernes partagées
 var (
 	BgDark      = color.RGBA{R: 15, G: 12, B: 41, A: 255}
 	BgDarker    = color.RGBA{R: 10, G: 8, B: 30, A: 255}

@@ -585,7 +585,6 @@ body {
     }
 }
 
-/* Styles pour les filtres avancés */
 .filter-toggle {
     cursor: pointer;
     transition: all 0.3s ease;

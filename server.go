@@ -10,7 +10,6 @@ import (
 	"strings"
 )
 
-// ArtistWithDetails contient toutes les infos d'un artiste avec relations
 type ArtistWithDetails struct {
 	ID             int                 `json:"id"`
 	Image          string              `json:"image"`
@@ -24,10 +23,8 @@ type ArtistWithDetails struct {
 }
 
 func serveur() {
-	// API endpoints
 	http.HandleFunc("/api/artists", handleGetArtists)
 
-	// Servir les fichiers statiques du dossier web
 	fs := http.FileServer(http.Dir("./web"))
 	http.Handle("/", fs)
 
@@ -45,12 +42,10 @@ func serveur() {
 	}
 }
 
-// handleGetArtists retourne tous les artistes avec leurs détails complets
 func handleGetArtists(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	// Récupérer les données de l'API
 	artists, err := models.FetchArtists()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -63,7 +58,6 @@ func handleGetArtists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Construire les détails complets
 	artistsWithDetails := make([]ArtistWithDetails, 0, len(artists))
 
 	for _, artist := range artists {
@@ -76,14 +70,11 @@ func handleGetArtists(w http.ResponseWriter, r *http.Request) {
 			FirstAlbum:   artist.FirstAlbum,
 		}
 
-		// Extraire l'année du premier album
 		details.FirstAlbumYear = extractYear(artist.FirstAlbum)
 
-		// Trouver les relations pour cet artiste
 		for _, rel := range relations.Index {
 			if rel.ID == artist.ID {
 				details.DatesLocations = rel.DatesLocations
-				// Extraire les lieux depuis DatesLocations
 				for loc := range rel.DatesLocations {
 					details.Locations = append(details.Locations, loc)
 				}
@@ -97,7 +88,6 @@ func handleGetArtists(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(artistsWithDetails)
 }
 
-// extractYear extrait l'année d'une date au format "DD-MM-YYYY"
 func extractYear(dateStr string) int {
 	parts := strings.Split(dateStr, "-")
 	if len(parts) == 3 {

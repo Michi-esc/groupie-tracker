@@ -12,30 +12,23 @@ import (
 func main() {
 	log.Println("[START] Loading Groupie Tracker...")
 
-	// Créer l'application Fyne
 	myApp := app.New()
 	log.Println("[OK] Fyne app created")
 
-	// Appliquer le thème personnalisé
 	myApp.Settings().SetTheme(&ui.CustomTheme{})
 
-	// Créer la fenêtre principale
 	win := ui.NewWindow(myApp)
 	log.Println("[OK] Window created")
 
-	// Afficher la liste au démarrage
 	showArtistList(win)
 	log.Println("[OK] Loading artists list...")
 
-	// Afficher la fenêtre et lancer l'application
 	win.Window.ShowAndRun()
 }
 
 func showArtistList(win *ui.Window) {
-	// Afficher le chargement
 	win.ShowLoading("Chargement des artistes...")
 
-	// Récupérer les artistes de l'API
 	go func() {
 		artists, err := models.FetchArtists()
 		if err != nil {
@@ -44,7 +37,6 @@ func showArtistList(win *ui.Window) {
 			return
 		}
 
-		// Créer et afficher la liste
 		list := ui.NewArtistList(artists, func(artist models.Artist) {
 			showArtistDetail(win, artist)
 		}, func() {
@@ -56,9 +48,7 @@ func showArtistList(win *ui.Window) {
 }
 
 func showArtistDetail(win *ui.Window, artist models.Artist) {
-	// Créer et afficher la page de détail
 	detailPage := ui.NewArtistPage(artist, func() {
-		// Retourner à la liste
 		showArtistList(win)
 	})
 
@@ -66,12 +56,9 @@ func showArtistDetail(win *ui.Window, artist models.Artist) {
 }
 
 func showMap(win *ui.Window, artists []models.Artist) {
-	// Afficher le chargement
 	win.ShowLoading("Chargement de la carte des concerts...")
 
-	// Créer et afficher la page de carte en passant la window
 	ui.NewMapPageWithWindow(win, artists, func() {
-		// Retourner à la liste
 		showArtistList(win)
 	})
 }

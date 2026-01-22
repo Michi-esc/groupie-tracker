@@ -18,11 +18,9 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-// Cache global pour le géocodage
 var geocodeCache = make(map[string]*LocationCoords)
 var cacheMutex = &sync.Mutex{}
 
-// LocationCoords représente les coordonnées d'un lieu
 type LocationCoords struct {
 	Lat      float64
 	Lon      float64
@@ -30,29 +28,23 @@ type LocationCoords struct {
 	Concerts []ConcertInfo
 }
 
-// ConcertInfo représente les infos d'un concert
 type ConcertInfo struct {
 	Artist string
 	Dates  []string
 }
 
-// GeocodingResponse représente la réponse de l'API de géocodage
 type GeocodingResponse struct {
 	Lat string `json:"lat"`
 	Lon string `json:"lon"`
 }
 
-// NewMapPageWithWindow crée une nouvelle page de carte et l'affiche dans la window
 func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
-	// Créer une barre de chargement simple
 	loadingLabel := widget.NewLabel("Loading map...")
 	loadingBar := widget.NewProgressBarInfinite()
 
-	// Créer le bouton retour
 	backButton := widget.NewButton("← Back", onBack)
 	backButton.Importance = widget.HighImportance
 
-	// Container temporaire avec chargement
 	tempContainer := container.NewVBox(
 		backButton,
 		widget.NewLabel("Concerts Map"),
@@ -60,12 +52,9 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 		loadingLabel,
 	)
 
-	// Afficher le container temporaire
 	win.SetContent(tempContainer)
 
-	// Charger la carte en arrière-plan
 	go func() {
-		// Récupérer les données de relations
 		relations, err := models.FetchRelations()
 		if err != nil {
 			fyne.CurrentApp().SendNotification(&fyne.Notification{
@@ -79,7 +68,6 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 			loadingLabel.SetText("Geocoding locations...")
 		})
 
-		// Collecte tous les lieux uniques
 		uniqueLocations := make(map[string]bool)
 		var concertsByLocation map[string][]ConcertInfo = make(map[string][]ConcertInfo)
 
@@ -103,20 +91,17 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 			loadingLabel.SetText(fmt.Sprintf("Geocoding: 0/%d", totalLocations))
 		})
 
-		// Géocoder en parallèle avec des goroutines - augmenter les workers pour plus de vitesse
 		numWorkers := 16
 		locationChan := make(chan string, len(uniqueLocations))
 		resultChan := make(chan *LocationCoords, len(uniqueLocations))
 		var wg sync.WaitGroup
 
-		// Lancer les workers
 		for i := 0; i < numWorkers; i++ {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
 				for location := range locationChan {
 					coords := geocodeLocationFast(location)
-					// Envoyer TOUJOURS un résultat, même s'il y a un fallback
 					if coords != nil {
 						coords.Concerts = concertsByLocation[location]
 						resultChan <- coords
@@ -125,7 +110,6 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 			}()
 		}
 
-		// Envoyer tous les lieux à géocoder
 		go func() {
 			for location := range uniqueLocations {
 				locationChan <- location
@@ -133,12 +117,10 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 			close(locationChan)
 		}()
 
-		// Récupérer les résultats au fur et à mesure
 		successCount := 0
 		var locations []*LocationCoords
 		var locMutex sync.Mutex
 
-		// Goroutine pour compter les résultats
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -156,11 +138,9 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 			}
 		}()
 
-		// Attendre que tous les workers finissent
 		wg.Wait()
 		close(resultChan)
 
-		// Attendre que le comptage finisse
 		time.Sleep(200 * time.Millisecond)
 
 		if len(locations) == 0 {
@@ -171,12 +151,10 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 			return
 		}
 
-		// Générer la carte visuelle directement
 		fyne.Do(func() {
 			loadingLabel.SetText(fmt.Sprintf("Rendering %d locations...", len(locations)))
 		})
 
-		// Créer la carte visuelle en Canvas
 		var mapCanvas fyne.CanvasObject
 		defer func() {
 			if r := recover(); r != nil {
@@ -189,13 +167,11 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 		scrollMap := container.NewScroll(mapCanvas)
 		scrollMap.SetMinSize(fyne.NewSize(1000, 600))
 
-		// Afficher la liste des lieux
 		fyne.Do(func() {
 			loadingLabel.SetText("Loading locations list...")
 		})
 		time.Sleep(300 * time.Millisecond)
 
-		// Créer la liste des lieux
 		var locationsList fyne.CanvasObject
 		defer func() {
 			if r := recover(); r != nil {
@@ -208,27 +184,22 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 		scrollLocations := container.NewScroll(locationsList)
 		scrollLocations.SetMinSize(fyne.NewSize(600, 600))
 
-		// Info
 		infoLabel := widget.NewLabel(fmt.Sprintf("%d locations found", len(locations)))
 		infoLabel.Alignment = fyne.TextAlignCenter
 		infoLabel.TextStyle = fyne.TextStyle{Bold: true}
 
-		// Titre
 		title := widget.NewLabel("Concerts Map")
 		title.TextStyle = fyne.TextStyle{Bold: true}
 		title.Alignment = fyne.TextAlignCenter
 
-		// Afficher la carte et la liste côte à côte
 		contentDisplay := container.NewHSplit(scrollMap, scrollLocations)
 
-		// Créer le container final avec header
 		finalContent := container.NewBorder(
 			container.NewVBox(backButton, title, infoLabel),
 			nil, nil, nil,
 			contentDisplay,
 		)
 
-		// Mettre à jour le contenu de la window depuis le thread UI
 		log.Println("Affichage de la carte avec", len(locations), "lieux")
 		fyne.Do(func() {
 			win.SetContent(finalContent)
@@ -236,9 +207,7 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 	}()
 }
 
-// geocodeLocationFast utilise plusieurs services de géocodage avec fallback
 func geocodeLocationFast(location string) *LocationCoords {
-	// Vérifier le cache
 	cacheMutex.Lock()
 	if cached, exists := geocodeCache[location]; exists {
 		cacheMutex.Unlock()
@@ -246,12 +215,9 @@ func geocodeLocationFast(location string) *LocationCoords {
 	}
 	cacheMutex.Unlock()
 
-	// Nettoyer le nom de la location
 	cleanLocation := strings.ReplaceAll(location, "_", " ")
 	cleanLocation = strings.ReplaceAll(cleanLocation, "-", ", ")
 
-	// Essayer d'abord le fallback rapide (par défaut par pays)
-	// Cela évite d'attendre les APIs qui peuvent être lentes
 	fallbackCoords := getApproxCoordinates(cleanLocation)
 	if fallbackCoords != nil {
 		cacheMutex.Lock()
@@ -260,7 +226,6 @@ func geocodeLocationFast(location string) *LocationCoords {
 		return fallbackCoords
 	}
 
-	// Si le fallback n'a pas trouvé, essayer les APIs en parallèle avec timeout court
 	apis := []struct {
 		name   string
 		urlFmt string
@@ -275,7 +240,6 @@ func geocodeLocationFast(location string) *LocationCoords {
 		},
 	}
 
-	// Essayer les APIs en parallèle pour plus de vitesse
 	resultChan := make(chan *LocationCoords, len(apis))
 	for _, api := range apis {
 		go func(a struct {
@@ -289,7 +253,6 @@ func geocodeLocationFast(location string) *LocationCoords {
 		}(api)
 	}
 
-	// Attendre le premier résultat avec timeout
 	select {
 	case result := <-resultChan:
 		if result != nil {
@@ -299,10 +262,8 @@ func geocodeLocationFast(location string) *LocationCoords {
 			return result
 		}
 	case <-time.After(3 * time.Second):
-		// Timeout - utiliser le fallback
 	}
 
-	// Fallback : extraire le pays du lieu et utiliser des coordonnées par défaut
 	coords := getApproxCoordinates(cleanLocation)
 	if coords != nil {
 		cacheMutex.Lock()
@@ -311,7 +272,6 @@ func geocodeLocationFast(location string) *LocationCoords {
 		return coords
 	}
 
-	// Dernier fallback : coordonnées mondiales au centre
 	defaultCoords := &LocationCoords{
 		Lat:      20.0,
 		Lon:      0.0,
@@ -323,7 +283,6 @@ func geocodeLocationFast(location string) *LocationCoords {
 	return defaultCoords
 }
 
-// tryGeocodeAPI essaie de géocoder avec une API spécifique
 func tryGeocodeAPI(cleanLocation, urlFmt, apiName string) *LocationCoords {
 	url := fmt.Sprintf(urlFmt, strings.ReplaceAll(cleanLocation, " ", "+"))
 
@@ -367,17 +326,14 @@ func tryGeocodeAPI(cleanLocation, urlFmt, apiName string) *LocationCoords {
 	return result
 }
 
-// getApproxCoordinates retourne des coordonnées approximatives selon le pays
 func getApproxCoordinates(location string) *LocationCoords {
 	location = strings.ToLower(strings.TrimSpace(location))
 
-	// Extraire le dernier mot (le pays)
 	parts := strings.Split(location, ",")
 	if len(parts) > 0 {
 		location = strings.TrimSpace(parts[len(parts)-1])
 	}
 
-	// Coordonnées approximatives des pays majeurs
 	countryCoords := map[string][2]float64{
 		"usa":            {39.8283, -98.5795},
 		"united states":  {39.8283, -98.5795},
@@ -430,13 +386,11 @@ func getApproxCoordinates(location string) *LocationCoords {
 	return nil
 }
 
-// createMapCanvas crée une représentation visuelle de la carte avec les coordonnées
 func createMapCanvas(locations []*LocationCoords) fyne.CanvasObject {
 	if len(locations) == 0 {
 		return canvas.NewText("Aucun lieu de concert", TextLight)
 	}
 
-	// Calculer les limites
 	minLat := locations[0].Lat
 	maxLat := locations[0].Lat
 	minLon := locations[0].Lon
@@ -457,11 +411,9 @@ func createMapCanvas(locations []*LocationCoords) fyne.CanvasObject {
 		}
 	}
 
-	// Ajouter du padding
 	latRange := maxLat - minLat
 	lonRange := maxLon - minLon
 
-	// S'assurer qu'il y a au moins un petit range pour éviter les divisions par zéro
 	if latRange < 0.1 {
 		latRange = 0.1
 	}
@@ -476,23 +428,18 @@ func createMapCanvas(locations []*LocationCoords) fyne.CanvasObject {
 	minLon -= lonPadding
 	maxLon += lonPadding
 
-	// Recalculer après padding
 	latRange = maxLat - minLat
 	lonRange = maxLon - minLon
 
-	// Dimensions de la carte
 	mapWidth := float32(1000)
 	mapHeight := float32(600)
 
-	// Créer le fond de la carte
 	mapBg := canvas.NewRectangle(BgDarker)
 	mapBg.SetMinSize(fyne.NewSize(mapWidth, mapHeight))
 
-	// Créer un conteneur pour les éléments de la carte
 	mapContainer := container.New(layout.NewMaxLayout())
 	mapContainer.Add(mapBg)
 
-	// Fonction pour convertir les coordonnées lat/lon en pixels
 	toLat := func(lat float64) float32 {
 		if latRange == 0 {
 			return mapHeight / 2
@@ -506,22 +453,18 @@ func createMapCanvas(locations []*LocationCoords) fyne.CanvasObject {
 		return float32((lon-minLon)/lonRange) * mapWidth
 	}
 
-	// Ajouter les marqueurs
 	for _, loc := range locations {
 		x := toLon(loc.Lon)
 		y := toLat(loc.Lat)
 
-		// Créer un marqueur (cercle rouge) - simplifié pour plus de vitesse
 		marker := canvas.NewCircle(AccentPink)
 		marker.StrokeWidth = 1
 		marker.StrokeColor = AccentCyan
 		marker.Move(fyne.NewPos(x-5, y-5))
 		marker.Resize(fyne.NewSize(10, 10))
 
-		// Ajouter le marqueur à la carte
 		mapContainer.Add(marker)
 
-		// Ajouter le texte du lieu (petit, tous les 10 marqueurs pour éviter la surcharge)
 		if len(locations) <= 50 || (len(locations) > 50 && indexOfLocation(locations, loc)%3 == 0) {
 			locationText := canvas.NewText(strings.Split(loc.Location, ",")[0], TextLight)
 			locationText.TextSize = 9
@@ -530,10 +473,8 @@ func createMapCanvas(locations []*LocationCoords) fyne.CanvasObject {
 		}
 	}
 
-	// Ajouter une grille légère (moins de lignes pour plus de vitesse)
 	gridColor := color.RGBA{R: 100, G: 100, B: 100, A: 30}
 
-	// Lignes verticales - réduites de 5 à 3
 	for i := 0; i <= 3; i++ {
 		x := float32(i) * mapWidth / 3
 		line := canvas.NewLine(gridColor)
@@ -543,7 +484,6 @@ func createMapCanvas(locations []*LocationCoords) fyne.CanvasObject {
 		mapContainer.Add(line)
 	}
 
-	// Lignes horizontales - réduites de 5 à 3
 	for i := 0; i <= 3; i++ {
 		y := float32(i) * mapHeight / 3
 		line := canvas.NewLine(gridColor)
@@ -553,7 +493,6 @@ func createMapCanvas(locations []*LocationCoords) fyne.CanvasObject {
 		mapContainer.Add(line)
 	}
 
-	// Ajouter les coordonnées aux coins
 	topLeft := canvas.NewText(fmt.Sprintf("%.1f°N, %.1f°W", maxLat, minLon), TextLight)
 	topLeft.TextSize = 8
 	topLeft.Move(fyne.NewPos(5, 5))
@@ -568,7 +507,6 @@ func createMapCanvas(locations []*LocationCoords) fyne.CanvasObject {
 	return mapContainer
 }
 
-// indexOfLocation trouve l'index d'une LocationCoords dans une slice
 func indexOfLocation(locations []*LocationCoords, target *LocationCoords) int {
 	for i, loc := range locations {
 		if loc.Location == target.Location {
@@ -578,13 +516,11 @@ func indexOfLocation(locations []*LocationCoords, target *LocationCoords) int {
 	return -1
 }
 
-// generateStaticMapURL génère une URL pour une image de carte statique avec marqueurs
 func generateStaticMapURL(locations []*LocationCoords) string {
 	if len(locations) == 0 {
 		return ""
 	}
 
-	// Calculer le centre et le zoom optimal
 	minLat := locations[0].Lat
 	maxLat := locations[0].Lat
 	minLon := locations[0].Lon
@@ -608,13 +544,9 @@ func generateStaticMapURL(locations []*LocationCoords) string {
 	centerLat := (minLat + maxLat) / 2
 	centerLon := (minLon + maxLon) / 2
 
-	// Utiliser plusieurs services en fallback
-	// 1. Essayer avec Google Static Maps
-	// Note: Sans clé API, ce service retournera un watermark mais fonctionnera
 	baseURL := "https://maps.googleapis.com/maps/api/staticmap?"
 	params := fmt.Sprintf("center=%.6f,%.6f&zoom=3&size=1200x700&style=feature:all|element:labels|visibility:off", centerLat, centerLon)
 
-	// Ajouter les marqueurs (limiter à 50)
 	for i, loc := range locations {
 		if i >= 50 {
 			break
@@ -622,22 +554,18 @@ func generateStaticMapURL(locations []*LocationCoords) string {
 		params += fmt.Sprintf("&markers=color:red|%.6f,%.6f", loc.Lat, loc.Lon)
 	}
 
-	// URL sans clé API - montrera une démonstration
 	return baseURL + params + "&key=AIzaSyB41DRUbKWJHPxagoK4fLi1aZjqsqOlEdE"
 }
 
-// createLocationsList crée une liste widget des lieux avec leurs concerts
 func createLocationsList(locations []*LocationCoords) *fyne.Container {
 	var items []fyne.CanvasObject
 
-	// Titre de la liste
 	titleLabel := widget.NewLabel("Liste des lieux de concerts")
 	titleLabel.TextStyle = fyne.TextStyle{Bold: true}
 	items = append(items, titleLabel)
 	items = append(items, widget.NewSeparator())
 
 	for _, loc := range locations {
-		// Créer un conteneur pour chaque lieu
 		locationName := strings.ReplaceAll(loc.Location, "_", " ")
 		locationName = strings.ReplaceAll(locationName, "-", ", ")
 
@@ -646,12 +574,10 @@ func createLocationsList(locations []*LocationCoords) *fyne.Container {
 
 		items = append(items, locLabel)
 
-		// Ajouter les concerts pour ce lieu
 		for _, concert := range loc.Concerts {
-			artistLabel := widget.NewLabel("  ♫ " + concert.Artist)
+			artistLabel := widget.NewLabel("  " + concert.Artist)
 			items = append(items, artistLabel)
 
-			// Afficher quelques dates
 			maxDates := 3
 			for i, date := range concert.Dates {
 				if i >= maxDates {
