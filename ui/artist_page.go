@@ -26,9 +26,9 @@ func NewArtistPage(artist models.Artist, onBack func()) fyne.CanvasObject {
 	header := container.NewMax(
 		headerBg,
 		container.NewVBox(
-			widget.NewLabel(""), // Spacer
+			widget.NewLabel(""),
 			backBtn,
-			widget.NewLabel(""), // Spacer
+			widget.NewLabel(""),
 		),
 	)
 	header.Resize(fyne.NewSize(0, 80))
@@ -81,14 +81,14 @@ func NewArtistPage(artist models.Artist, onBack func()) fyne.CanvasObject {
 
 	// contenu scrollable
 	mainContent := container.NewVBox(
-		widget.NewLabel(""), // Spacer
+		widget.NewLabel(""),
 		container.NewCenter(img),
 		container.NewCenter(titleText),
 		container.NewCenter(yearBadge),
 		container.NewCenter(albumText),
-		widget.NewLabel(""), // Spacer
+		widget.NewLabel(""),
 		membersSection,
-		widget.NewLabel(""), // Spacer
+		widget.NewLabel(""),
 	)
 
 	// on charge les concerts
@@ -97,7 +97,7 @@ func NewArtistPage(artist models.Artist, onBack func()) fyne.CanvasObject {
 		mainContent.Add(concertContent)
 	}
 
-	mainContent.Add(widget.NewLabel("")) // Spacer final
+	mainContent.Add(widget.NewLabel(""))
 
 	scroll := container.NewScroll(mainContent)
 
@@ -237,57 +237,10 @@ func formatLocationForMap(location string) string {
 func getCountryFlag(location string) string {
 	location = strings.ToLower(strings.TrimSpace(location))
 
-	// Extraire le dernier mot (le pays)
 	parts := strings.Split(location, ",")
 	if len(parts) > 0 {
 		location = strings.TrimSpace(parts[len(parts)-1])
 	}
 
-	flags := map[string]string{
-		"usa":         "🇺🇸",
-		"uk":          "🇬🇧",
-		"france":      "🇫🇷",
-		"germany":     "🇩🇪",
-		"spain":       "🇪🇸",
-		"italy":       "🇮🇹",
-		"japan":       "🇯🇵",
-		"canada":      "🇨🇦",
-		"australia":   "🇦🇺",
-		"brazil":      "🇧🇷",
-		"mexico":      "🇲🇽",
-		"netherlands": "🇳🇱",
-		"belgium":     "🇧🇪",
-		"switzerland": "🇨🇭",
-		"sweden":      "🇸🇪",
-		"norway":      "🇳🇴",
-		"denmark":     "🇩🇰",
-		"finland":     "🇫🇮",
-		"portugal":    "🇵🇹",
-		"ireland":     "🇮🇪",
-		"poland":      "🇵🇱",
-		"austria":     "🇦🇹",
-		"czech":       "🇨🇿",
-		"russia":      "🇷🇺",
-		"china":       "🇨🇳",
-		"korea":       "🇰🇷",
-		"india":       "🇮🇳",
-		"argentina":   "🇦🇷",
-		"chile":       "🇨🇱",
-		"colombia":    "🇨🇴",
-		"peru":        "🇵🇪",
-		"zealand":     "🇳🇿",
-		"africa":      "🇿🇦",
-		"israel":      "🇮🇱",
-		"turkey":      "🇹🇷",
-		"greece":      "🇬🇷",
-	}
-
-	// Chercher une correspondance
-	for key, flag := range flags {
-		if strings.Contains(location, key) {
-			return flag
-		}
-	}
-
-	return "🌍" // Drapeau par défaut
+	return ""
 }
