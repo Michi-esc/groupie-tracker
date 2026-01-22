@@ -3,6 +3,9 @@ package ui
 // current lang
 var CurrentLang = "fr"
 
+// cached translations (pre-loaded)
+var cachedTranslations = map[string]Translations{}
+
 // lang strings
 type Translations struct {
 	// common
@@ -123,8 +126,18 @@ var En = Translations{
 	SelectLocation:   "Select a location to see details",
 }
 
-// get current translations
+// init translations cache (call once at startup)
+func InitTranslations() {
+	cachedTranslations["fr"] = Fr
+	cachedTranslations["en"] = En
+}
+
+// get current translations (pre-loaded from cache)
 func T() Translations {
+	if trans, ok := cachedTranslations[CurrentLang]; ok {
+		return trans
+	}
+	// fallback to dynamic lookup if cache not initialized
 	if CurrentLang == "en" {
 		return En
 	}

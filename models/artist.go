@@ -39,8 +39,8 @@ type RelationData struct {
 // lieux avec coords
 type LocationData struct {
 	Index []struct {
-		ID    int      `json:"id"`
-		Lieux []string `json:"lieux"`
+		ID        int      `json:"id"`
+		Locations []string `json:"locations"`
 	} `json:"index"`
 }
 

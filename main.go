@@ -16,6 +16,16 @@ import (
 func main() {
 	log.Println("[START] Loading Groupie Tracker...")
 
+	// Initialize translations cache (pre-load all languages)
+	ui.InitTranslations()
+	log.Println("[OK] Translations pre-loaded")
+
+	// Initialize geocode cache (load persisted geocoding data)
+	if err := models.InitGeocodeCache(); err != nil {
+		log.Printf("Warning: Could not initialize geocode cache: %v\n", err)
+	}
+	log.Println("[OK] Geocode cache initialized")
+
 	// Créer l'application Fyne avec un ID stable pour les préférences
 	myApp := app.NewWithID("groupie-tracker")
 	log.Println("[OK] Fyne app created")

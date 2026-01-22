@@ -414,7 +414,7 @@ func (l *ArtistList) filteredArtists() []models.Artist {
 			matchesLocation = true // pas de lieu -> on affiche
 		} else {
 			for _, loc := range a.LocationsList {
-				normalized := normalizeLocation(loc)
+				normalized := formatLocationDisplay(loc)
 				if l.selectedLocs[normalized] {
 					matchesLocation = true
 					break
@@ -486,7 +486,7 @@ func extractAllLocations(artists []models.Artist) []string {
 	locationSet := make(map[string]bool)
 	for _, a := range artists {
 		for _, loc := range a.LocationsList {
-			normalized := normalizeLocation(loc)
+			normalized := formatLocationDisplay(loc)
 			locationSet[normalized] = true
 		}
 	}
@@ -498,7 +498,7 @@ func extractAllLocations(artists []models.Artist) []string {
 	return locations
 }
 
-func normalizeLocation(loc string) string {
+func formatLocationDisplay(loc string) string {
 	// convertit "city-state-country" en "City, State, Country"
 	parts := strings.Split(loc, "-")
 	normalized := make([]string, len(parts))
