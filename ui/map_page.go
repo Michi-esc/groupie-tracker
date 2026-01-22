@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"groupie-tracker/models"
+	"image/color"
 	"io"
 	"log"
 	"math"
@@ -193,7 +194,7 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 			}
 		}()
 
-		mapCanvas = createMapCanvasFromAPI(concertLocations)
+		mapCanvas = createMapCanvasFromAPI(concertLocations, concertsByLocation)
 		log.Println("Map canvas created successfully")
 
 		// on prépare la liste des lieux
@@ -411,7 +412,7 @@ func normalizeLocation(location string) string {
 }
 
 // dessine carte
-func createMapCanvasFromAPI(locations []*models.LocationCoords) fyne.CanvasObject {
+func createMapCanvasFromAPI(locations []*models.LocationCoords, concertsByLocation map[string][]ConcertInfo) fyne.CanvasObject {
 	log.Printf("createMapCanvasFromAPI called with %d locations\n", len(locations))
 	if len(locations) == 0 {
 		return canvas.NewText(T().NoLocations, ContrastColor(BgDarker))
@@ -582,7 +583,10 @@ func createMapCanvasFromAPI(locations []*models.LocationCoords) fyne.CanvasObjec
 	// Separate container for markers (on top of tiles)
 	markerContainer := container.NewWithoutLayout()
 
-	// Add markers immediately
+	// Container for tooltips (on top of everything)
+	tooltipContainer := container.NewWithoutLayout()
+
+	// Add markers with hover tooltips
 	for _, loc := range locations {
 		tx, ty := latLonToTileXY(loc.Latitude, loc.Longitude, zoom)
 		px := float32((tx - float64(xMin)) * float64(tileSize))
@@ -595,23 +599,69 @@ func createMapCanvasFromAPI(locations []*models.LocationCoords) fyne.CanvasObjec
 		marker.Move(fyne.NewPos(px-6, py-6))
 		markerContainer.Add(marker)
 
-		if len(locations) <= 50 || (len(locations) > 50 && indexOfLocationFromAPI(locations, loc)%3 == 0) {
-			locationName := strings.ReplaceAll(loc.Lieux, "_", " ")
-			locationName = strings.ReplaceAll(locationName, "-", ", ")
-			parts := strings.Split(locationName, ",")
-			displayName := parts[0]
-			if len(parts) > 1 {
-				displayName = parts[len(parts)-1]
+		// Create tooltip text for this location
+		locationName := strings.ReplaceAll(loc.Lieux, "_", " ")
+		locationName = strings.ReplaceAll(locationName, "-", ", ")
+
+		// Build tooltip content as vertical container
+		tooltipContent := container.NewVBox()
+
+		// Location name
+		locationLabel := widget.NewLabel(locationName)
+		locationLabel.TextStyle = fyne.TextStyle{Bold: true}
+		tooltipContent.Add(locationLabel)
+		tooltipContent.Add(widget.NewSeparator())
+
+		// Get concerts for this location
+		if concerts, ok := concertsByLocation[loc.Lieux]; ok {
+			for _, concert := range concerts {
+				artistLabel := widget.NewLabel(concert.Artist)
+				artistLabel.TextStyle = fyne.TextStyle{Bold: true}
+				tooltipContent.Add(artistLabel)
+
+				for _, date := range concert.Dates {
+					dateLabel := widget.NewLabel(date)
+					tooltipContent.Add(dateLabel)
+				}
 			}
-			locationText := canvas.NewText(strings.TrimSpace(displayName), ContrastColor(BgDarker))
-			locationText.TextSize = 9
-			locationText.Move(fyne.NewPos(px+10, py-5))
-			markerContainer.Add(locationText)
+		} else {
+			tooltipContent.Add(widget.NewLabel("(Pas de concerts)"))
 		}
+
+		// Create tooltip box with white background
+		tooltip := canvas.NewRectangle(color.White)
+		tooltipBox := container.NewStack(tooltip, tooltipContent)
+		tooltipBox.Resize(fyne.NewSize(250, 0)) // Width fixed, height auto
+		tooltipBox.Move(fyne.NewPos(px+15, py-10))
+		tooltipBox.Hide()
+
+		tooltipContainer.Add(tooltipBox)
+
+		// Create custom tappable for hover detection
+		tappable := widget.NewButton("", nil)
+		tappable.Importance = widget.LowImportance
+		tappable.Resize(fyne.NewSize(24, 24))
+		tappable.Move(fyne.NewPos(px-12, py-12))
+
+		// Store reference for closure
+		currentTooltip := tooltipBox
+
+		tappable.OnTapped = func() {
+			if currentTooltip.Visible() {
+				currentTooltip.Hide()
+			} else {
+				currentTooltip.Show()
+			}
+		}
+
+		markerContainer.Add(tappable)
 	}
 
 	markerContainer.Resize(fyne.NewSize(totalWidth, totalHeight))
 	mapContainer.Add(markerContainer)
+
+	tooltipContainer.Resize(fyne.NewSize(totalWidth, totalHeight))
+	mapContainer.Add(tooltipContainer)
 
 	scroll := container.NewScroll(mapContainer)
 	scroll.SetMinSize(fyne.NewSize(mapWidth, mapHeight))
