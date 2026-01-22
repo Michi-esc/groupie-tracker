@@ -628,10 +628,19 @@ func createMapCanvasFromAPI(locations []*models.LocationCoords, concertsByLocati
 			tooltipContent.Add(noConcertText)
 		}
 
-		// Create tooltip box with white background
+		// Create tooltip box with white background and padding
 		tooltip := canvas.NewRectangle(color.White)
-		tooltipBox := container.NewStack(tooltip, tooltipContent)
-		tooltipBox.Resize(fyne.NewSize(250, 0)) // Width fixed, height auto
+		tooltip.StrokeColor = color.Gray{Y: 200}
+		tooltip.StrokeWidth = 1
+
+		// Add padding around the text
+		paddedContent := container.NewPadded(tooltipContent)
+
+		// Container with background and content
+		bgContainer := container.NewStack(tooltip, paddedContent)
+		bgContainer.Resize(fyne.NewSize(280, 200))
+
+		tooltipBox := bgContainer
 		tooltipBox.Move(fyne.NewPos(px+15, py-10))
 		tooltipBox.Hide()
 
