@@ -20,7 +20,6 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -197,6 +196,26 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 		mapCanvas = createMapCanvasFromAPI(concertLocations, concertsByLocation)
 		log.Println("Map canvas created successfully")
 
+		// on prépare la liste des lieux
+		fyne.Do(func() {
+			loadingLabel.SetText("Loading locations list...")
+		})
+		time.Sleep(300 * time.Millisecond)
+
+		log.Println("Creating locations list...")
+		// on génère la liste des lieux
+		var locationsList fyne.CanvasObject
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("Erreur dans createLocationsList: %v\n", r)
+				locationsList = canvas.NewText("Erreur lors de la création de la liste", ContrastColor(BgDarker))
+			}
+		}()
+		locationsList = createLocationsListFromAPI(concertLocations, concertsByLocation)
+		log.Println("Locations list created successfully")
+		scrollLocations := container.NewScroll(locationsList)
+		scrollLocations.SetMinSize(fyne.NewSize(400, 600))
+
 		// petit résumé du nombre de lieux
 		infoLabel := widget.NewLabel(fmt.Sprintf("%d "+T().Location, len(concertLocations)))
 		infoLabel.Alignment = fyne.TextAlignCenter
@@ -207,11 +226,15 @@ func NewMapPageWithWindow(win *Window, artists []models.Artist, onBack func()) {
 		title.TextStyle = fyne.TextStyle{Bold: true}
 		title.Alignment = fyne.TextAlignCenter
 
+		// carte + liste côte à côte (70% carte, 30% liste)
+		contentDisplay := container.NewHSplit(mapCanvas, scrollLocations)
+		contentDisplay.Offset = 0.7 // 70% pour la carte, 30% pour la liste
+
 		// border final
 		finalContent := container.NewBorder(
 			container.NewVBox(backButton, title, infoLabel),
 			nil, nil, nil,
-			mapCanvas,
+			contentDisplay,
 		)
 
 		// Mettre à jour le contenu de la window depuis le thread UI
@@ -441,14 +464,14 @@ func createMapCanvasFromAPI(locations []*models.LocationCoords, concertsByLocati
 	lonRange = maxLon - minLon
 
 	// target canvas display size
-	mapWidth := float32(1600)
-	mapHeight := float32(900)
+	mapWidth := float32(1920)
+	mapHeight := float32(1080)
 
 	// choose zoom to roughly fit bounding box into mapWidth/mapHeight
 	// test zooms from 1..6 and pick the one where tile pixel span is >= map size
 	// (6 is reasonable for worldwide view; 12+ would load millions of tiles)
 	chooseZoom := func() int {
-		for z := 3; z >= 1; z-- {
+		for z := 2; z >= 1; z-- {
 			tx1, ty1 := latLonToTileXY(maxLat, minLon, z)
 			tx2, ty2 := latLonToTileXY(minLat, maxLon, z)
 			dx := math.Abs(tx2-tx1) * float64(tileSize)
@@ -461,7 +484,7 @@ func createMapCanvasFromAPI(locations []*models.LocationCoords, concertsByLocati
 	}
 
 	zoom := chooseZoom()
-	maxTiles := 16 // cap très bas pour voir le monde entier
+	maxTiles := 150
 	log.Printf("Chosen zoom level: %d\n", zoom)
 
 	// compute tile ranges
@@ -532,8 +555,8 @@ func createMapCanvasFromAPI(locations []*models.LocationCoords, concertsByLocati
 	totalWidth := float32(tilesX * tileSize)
 	totalHeight := float32(tilesY * tileSize)
 
-	// container for tiles and overlays
-	mapContainer := container.New(layout.NewMaxLayout())
+	// container for tiles and overlays - use WithoutLayout to stack layers
+	mapContainer := container.NewWithoutLayout()
 
 	// a dedicated container for absolute placement
 	tileContainer := container.NewWithoutLayout()
@@ -639,6 +662,9 @@ func createMapCanvasFromAPI(locations []*models.LocationCoords, concertsByLocati
 
 	tooltipContainer.Resize(fyne.NewSize(totalWidth, totalHeight))
 	mapContainer.Add(tooltipContainer)
+
+	// Set the map container to the full tile grid size
+	mapContainer.Resize(fyne.NewSize(totalWidth, totalHeight))
 
 	scroll := container.NewScroll(mapContainer)
 
